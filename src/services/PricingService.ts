@@ -25,15 +25,16 @@ const DEFAULT_PRICING: PricingConfig = {
 };
 
 /**
- * Factores de exclusión por tipo de vehículo
+ * Factores de exclusión por tipo de vehículo del REPARTIDOR
  * Para clasificación laboral (cálculo de ingresos netos)
+ * Según documento oficial BeFast
  */
 const VEHICLE_EXCLUSION_FACTORS = {
-  'CARRO': 0.36,     // 4 ruedas: 36%
-  'MOTO': 0.30,      // 2 ruedas: 30%
-  'SCOOTER': 0.30,   // 2 ruedas: 30%
-  'BICICLETA': 0.12, // Bicicleta: 12%
-  'PIE': 0.12        // A pie: 12%
+  'AUTO': 0.36,       // Auto (4 ruedas): 36%
+  'MOTO': 0.30,       // Moto (2 ruedas): 30%
+  'SCOOTER': 0.30,    // Scooter (2 ruedas): 30%
+  'BICICLETA': 0.12,  // Bicicleta: 12%
+  'PIE': 0.12         // A pie: 12%
 };
 
 /**
@@ -128,8 +129,16 @@ class PricingService {
   }
 
   /**
-   * Calcula la clasificación laboral del conductor
+   * Calcula la clasificación laboral del REPARTIDOR
    * Basado en ingresos del primer mes y factor de exclusión por tipo de vehículo
+   * 
+   * Fórmula según documento oficial:
+   * Ingreso Neto = Ingreso Bruto Mensual - (Ingreso Bruto Mensual * Factor de Exclusión)
+   * 
+   * Factores de Exclusión:
+   * - Auto (4 ruedas): 36%
+   * - Moto / Scooter (2 ruedas): 30%
+   * - Bicicleta / Pie: 12%
    */
   calculateLaborClassification(
     grossMonthlyIncome: number,
@@ -142,9 +151,9 @@ class PricingService {
     classification: 'EMPLEADO_COTIZANTE' | 'TRABAJADOR_INDEPENDIENTE';
     exceedsMinimum: boolean;
   } {
-    const minimumWageReference = 8364; // MXN (según documento)
+    const minimumWageReference = 8364; // MXN (Salario mínimo de referencia según documento)
     
-    // Obtener factor de exclusión según tipo de vehículo
+    // Obtener factor de exclusión según tipo de vehículo del repartidor
     const vehicleTypeUpper = vehicleType.toUpperCase();
     const exclusionFactor = VEHICLE_EXCLUSION_FACTORS[vehicleTypeUpper] || 0.30;
     
