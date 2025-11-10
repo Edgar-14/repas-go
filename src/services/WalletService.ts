@@ -33,9 +33,15 @@ const BEFAST_BANK_INFO = {
 class WalletService {
   /**
    * Procesa la transacción financiera de un pedido completado
-   * Lógica según documento:
-   * - Tarjeta: Transfer inmediato (Total - 15 MXN) + 100% propina
-   * - Efectivo: Registro de deuda de 15 MXN (conductor ya tiene el efectivo)
+   * Lógica CORRECTA según documento:
+   * - Tarjeta: REGISTRA movimiento en billetera (Total - 15 MXN) + 100% propina - deuda automática
+   *   Si tiene deuda, se descuenta del monto a registrar
+   *   NO SE TRANSFIERE AL MOMENTO - solo se registra el movimiento
+   * - Efectivo: REGISTRA deuda de 15 MXN (conductor ya tiene el efectivo)
+   *   NO SE TRANSFIERE NADA - solo se registra el movimiento
+   * 
+   * IMPORTANTE: Las transferencias bancarias ocurren en días específicos de pago,
+   * NO al momento de completar el pedido. Aquí solo se REGISTRAN los movimientos.
    */
   async processOrderCompletion(
     orderId: string,
@@ -48,10 +54,20 @@ class WalletService {
     transactions: any[];
     newBalance: number;
     newDebt: number;
+    debtDeducted: number;
+    finalTransferAmount: number;
     auditResult: 'MATCH' | 'MISMATCH';
     message?: string;
   }> {
     try {
+      // Obtener deuda actual del conductor
+      const driverDoc = await firestore()
+        .collection(COLLECTIONS.DRIVERS)
+        .doc(driverId)
+        .get();
+      
+      const currentDebt = driverDoc.data()?.wallet?.pendingDebts || 0;
+
       // Calcular ganancias del conductor
       const earnings = PricingService.calculateDriverEarnings(
         orderTotal,
@@ -67,6 +83,7 @@ class WalletService {
         tipAmount,
         paymentMethod,
         earnings,
+        currentDebt,
         timestamp: new Date().toISOString()
       });
 
@@ -80,6 +97,8 @@ class WalletService {
           transactions: [],
           newBalance: 0,
           newDebt: 0,
+          debtDeducted: 0,
+          finalTransferAmount: 0,
           auditResult: 'MISMATCH',
           message: 'Auditoría de transacción falló. Contacta a soporte.'
         };
@@ -90,6 +109,8 @@ class WalletService {
         transactions: data.transactions || [],
         newBalance: data.newBalance || 0,
         newDebt: data.newDebt || 0,
+        debtDeducted: data.debtDeducted || 0,
+        finalTransferAmount: data.finalTransferAmount || 0,
         auditResult: 'MATCH',
         message: 'Transacción procesada exitosamente'
       };

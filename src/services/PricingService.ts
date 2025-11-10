@@ -29,7 +29,7 @@ const DEFAULT_PRICING: PricingConfig = {
  * Para clasificación laboral (cálculo de ingresos netos)
  */
 const VEHICLE_EXCLUSION_FACTORS = {
-  'AUTO': 0.36,      // 4 ruedas: 36%
+  'CARRO': 0.36,     // 4 ruedas: 36%
   'MOTO': 0.30,      // 2 ruedas: 30%
   'SCOOTER': 0.30,   // 2 ruedas: 30%
   'BICICLETA': 0.12, // Bicicleta: 12%
@@ -169,52 +169,63 @@ class PricingService {
   }
 
   /**
-   * Calcula la distancia entre dos puntos usando la fórmula de Haversine
+   * Calcula la distancia entre dos puntos usando Google Maps Distance Matrix API
+   * CRÍTICO: Debe usar Google Maps para evitar discrepancias con los cálculos del cliente
    * Retorna la distancia en kilómetros
    */
-  calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ): number {
-    const R = 6371; // Radio de la Tierra en km
-    const dLat = this.toRadians(lat2 - lat1);
-    const dLon = this.toRadians(lon2 - lon1);
-    
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRadians(lat1)) * Math.cos(this.toRadians(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    
-    return parseFloat(distance.toFixed(2));
+  async calculateDistance(
+    originLat: number,
+    originLng: number,
+    destLat: number,
+    destLng: number
+  ): Promise<number> {
+    try {
+      // Usar Google Maps Distance Matrix API para obtener la distancia real de ruta
+      const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY'; // Debe configurarse
+      const origin = `${originLat},${originLng}`;
+      const destination = `${destLat},${destLng}`;
+      
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&key=${apiKey}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.rows[0]?.elements[0]?.status === 'OK') {
+        const distanceInMeters = data.rows[0].elements[0].distance.value;
+        const distanceInKm = distanceInMeters / 1000;
+        return parseFloat(distanceInKm.toFixed(2));
+      } else {
+        throw new Error('No se pudo calcular la distancia con Google Maps');
+      }
+    } catch (error) {
+      console.error('Error calculating distance with Google Maps:', error);
+      throw new Error('Error al calcular distancia. Verifica la configuración de Google Maps API.');
+    }
   }
 
   /**
-   * Calcula la distancia total del pedido (pickup -> delivery)
+   * Calcula la distancia total del pedido (pickup -> delivery) usando Google Maps
+   * CRÍTICO: Usa Google Maps Distance Matrix API para coincidir con cálculos del cliente
    */
-  calculateOrderDistance(
+  async calculateOrderDistance(
     pickupLat: number,
     pickupLon: number,
     deliveryLat: number,
     deliveryLon: number
-  ): number {
-    return this.calculateDistance(pickupLat, pickupLon, deliveryLat, deliveryLon);
+  ): Promise<number> {
+    return await this.calculateDistance(pickupLat, pickupLon, deliveryLat, deliveryLon);
   }
 
   /**
-   * Calcula la distancia del conductor al punto de recogida
+   * Calcula la distancia del conductor al punto de recogida usando Google Maps
    */
-  calculateDriverToPickupDistance(
+  async calculateDriverToPickupDistance(
     driverLat: number,
     driverLon: number,
     pickupLat: number,
     pickupLon: number
-  ): number {
-    return this.calculateDistance(driverLat, driverLon, pickupLat, pickupLon);
+  ): Promise<number> {
+    return await this.calculateDistance(driverLat, driverLon, pickupLat, pickupLon);
   }
 
   /**
