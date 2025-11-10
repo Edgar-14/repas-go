@@ -1,45 +1,48 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+// App principal de BeFast GO
+import React, { useEffect } from 'react';
+import { StatusBar, Alert } from 'react-native';
+import { Provider } from 'react-redux';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { store } from './src/store';
+import AppNavigator from './src/navigation/AppNavigator';
+import { initializeFirebase, setupNotificationListeners } from './src/config/firebase';
 
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+const App: React.FC = () => {
+  useEffect(() => {
+    initializeApp();
+  }, []);
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+  const initializeApp = async () => {
+    try {
+      // Inicializar Firebase
+      const firebaseInitialized = await initializeFirebase();
+      if (!firebaseInitialized) {
+        Alert.alert('Error', 'No se pudo inicializar Firebase');
+        return;
+      }
+
+      // Configurar listeners de notificaciones
+      setupNotificationListeners();
+
+      console.log('BeFast GO initialized successfully');
+    } catch (error) {
+      console.error('Error initializing app:', error);
+      Alert.alert('Error', 'Error al inicializar la aplicación');
+    }
+  };
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
+    <Provider store={store}>
+      <SafeAreaProvider>
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor="#FF6B35"
+          translucent={false}
+        />
+        <AppNavigator />
+      </SafeAreaProvider>
+    </Provider>
   );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+};
 
 export default App;
