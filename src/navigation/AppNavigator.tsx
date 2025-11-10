@@ -9,6 +9,8 @@ import { RootState } from '../store';
 
 // Screens
 import {
+  OnboardingScreen,
+  RegistrationScreen,
   LoginScreen,
   DashboardScreen,
   OrderDetailScreen,
@@ -21,7 +23,8 @@ import {
   SettingsScreen,
   DocumentsScreen,
   DeliveryConfirmationScreen,
-  IncidentsScreen
+  IncidentsScreen,
+  ChatScreen
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -106,12 +109,24 @@ const AppNavigator = () => {
         }}
       >
         {!isAuthenticated || !canReceiveOrders ? (
-          // Pantallas de autenticación
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{ headerShown: false }}
-          />
+          // Pantallas de autenticación y registro
+          <>
+            <Stack.Screen
+              name="Onboarding"
+              component={OnboardingScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Registration"
+              component={RegistrationScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen}
+              options={{ headerShown: false }}
+            />
+          </>
         ) : (
           // Pantallas principales
           <>
@@ -187,6 +202,14 @@ const AppNavigator = () => {
               component={IncidentsScreen as any}
               options={{
                 title: 'Reportar Incidente',
+              }}
+            />
+            
+            <Stack.Screen
+              name="Chat"
+              component={ChatScreen as any}
+              options={{
+                headerShown: false,
               }}
             />
           </>
