@@ -164,7 +164,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
           <MapViewDirections
             origin={driverLocation}
             destination={currentDestination}
-            apikey="YOUR_GOOGLE_MAPS_API_KEY" // Reemplazar con tu API key
+            apikey="AIzaSyAEFo3RDFvqw0-HuSOOBD34NGruHI3hIBQ" // Reemplazar con tu API key
             strokeWidth={4}
             strokeColor="#667eea"
             optimizeWaypoints={true}

@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "897579485656",
+    "firebase_url": "https://befast-hfkbl-default-rtdb.firebaseio.com",
+    "project_id": "befast-hfkbl",
+    "storage_bucket": "befast-hfkbl.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:897579485656:android:c307afdda53e9328a84aad",
+        "android_client_info": {
+          "package_name": "com.be_fast.be_fast"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "897579485656-djipnsorj86345j9ok340a8suupudlgg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvzZ5oFXKjIqIymeMfJrkM7UMfU6qDjuM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "897579485656-djipnsorj86345j9ok340a8suupudlgg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
