@@ -1,20 +1,12 @@
 // Configuración de Firebase para BeFast GO
-import { initializeApp } from '@react-native-firebase/app';
+// Nota: En React Native (con @react-native-firebase) NO se usa la config web ni initializeApp manual.
+// La app [DEFAULT] se inicializa nativamente leyendo android/app/google-services.json.
+import firebase from '@react-native-firebase/app';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
 import storage from '@react-native-firebase/storage';
 import functions from '@react-native-firebase/functions';
-
-// Configuración del proyecto Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyBqJxKuoZ8X7X7X7X7X7X7X7X7X7X7X7X7",
-  authDomain: "befast-hfkbl.firebaseapp.com",
-  projectId: "befast-hfkbl",
-  storageBucket: "befast-hfkbl.appspot.com",
-  messagingSenderId: "897579485656",
-  appId: "1:897579485656:android:abc123def456"
-};
 
 // Colecciones de Firestore (usar exactamente estas)
 export const COLLECTIONS = {
@@ -52,11 +44,12 @@ export { auth, firestore, messaging, storage, functions };
 // Función para inicializar Firebase
 export const initializeFirebase = async () => {
   try {
-    // Firebase se inicializa automáticamente en React Native
-    console.log('Firebase initialized successfully');
+    // Tocar la app por defecto para forzar/validar inicialización nativa
+    const defaultApp = firebase.app();
+    console.log('Firebase default app:', defaultApp.name);
     return true;
   } catch (error) {
-    console.error('Error initializing Firebase:', error);
+    console.error('Error initializing Firebase (default app not available):', error);
     return false;
   }
 };

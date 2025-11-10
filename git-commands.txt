@@ -1,0 +1,11 @@
+# Comandos para conectar con el repositorio remoto
+# Reemplaza "tu-usuario" con tu nombre de usuario de GitHub
+
+git remote add origin https://github.com/tu-usuario/repas-go.git
+git branch -M main
+git push -u origin main
+
+# Alternativamente, si prefieres SSH:
+# git remote add origin git@github.com:tu-usuario/repas-go.git
+# git branch -M main
+# git push -u origin main

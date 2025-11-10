@@ -1,6 +1,12 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"
+
+// Exclude legacy Android support libraries to avoid duplicate classes with AndroidX
+configurations.all {
+    exclude group: 'com.android.support'
+}
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -79,11 +85,15 @@ android {
 
     namespace "com.befastgo"
     defaultConfig {
-        applicationId "com.befastgo"
+        applicationId "com.be_fast.be_fast"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [
+            usesCleartextTraffic: true,
+            MAPS_API_KEY: (project.findProperty("MAPS_API_KEY") ?: "")
+        ]
     }
     signingConfigs {
         debug {

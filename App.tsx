@@ -1,5 +1,5 @@
 // App principal de BeFast GO
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StatusBar, Alert } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -10,6 +10,8 @@ import { initializeFirebase, setupNotificationListeners } from './src/config/fir
 import NotificationHandler from './src/components/NotificationHandler';
 
 const App: React.FC = () => {
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     initializeApp();
   }, []);
@@ -26,6 +28,7 @@ const App: React.FC = () => {
       // Configurar listeners de notificaciones
       setupNotificationListeners();
 
+      setReady(true);
       console.log('BeFast GO initialized successfully');
     } catch (error) {
       console.error('Error initializing app:', error);
@@ -41,7 +44,7 @@ const App: React.FC = () => {
           backgroundColor="#FF6B35"
           translucent={false}
         />
-        <NotificationHandler />
+        {ready && <NotificationHandler />}
         <AppNavigator />
         <Toast />
       </SafeAreaProvider>

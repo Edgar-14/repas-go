@@ -9,7 +9,7 @@ import { RootState } from '../store';
 
 // Screens
 import {
-  OnboardingScreen,
+  BrandScreen,
   RegistrationScreen,
   LoginScreen,
   DashboardScreen,
@@ -93,8 +93,7 @@ const MainTabNavigator = () => {
 
 // Stack Navigator principal
 const AppNavigator = () => {
-  const { isAuthenticated, canReceiveOrders } = useSelector((state: RootState) => state.auth);
-
+  // Flujo inicial con pantallas críticas restauradas
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -107,113 +106,73 @@ const AppNavigator = () => {
             fontWeight: 'bold',
           },
         }}
+        initialRouteName="Brand"
       >
-        {!isAuthenticated || !canReceiveOrders ? (
-          // Pantallas de autenticación y registro
-          <>
-            <Stack.Screen
-              name="Onboarding"
-              component={OnboardingScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Registration"
-              component={RegistrationScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{ headerShown: false }}
-            />
-          </>
-        ) : (
-          // Pantallas principales
-          <>
-            <Stack.Screen
-              name="Main"
-              component={MainTabNavigator}
-              options={{ headerShown: false }}
-            />
-            
-            <Stack.Screen
-              name="OrderDetail"
-              component={OrderDetailScreen as any}
-              options={{
-                title: 'Detalles del Pedido',
-              }}
-            />
-            
-            <Stack.Screen
-              name="Navigation"
-              component={NavigationScreen as any}
-              options={{
-                title: 'Navegación',
-                gestureEnabled: false, // Evitar que salga accidentalmente
-              }}
-            />
-            
-            <Stack.Screen
-              name="Notifications"
-              component={NotificationsScreen}
-              options={{
-                title: 'Notificaciones',
-              }}
-            />
-            
-            <Stack.Screen
-              name="Emergency"
-              component={EmergencyScreen}
-              options={{
-                title: 'Emergencia',
-                headerStyle: {
-                  backgroundColor: '#F44336',
-                },
-              }}
-            />
-            
-            <Stack.Screen
-              name="Settings"
-              component={SettingsScreen}
-              options={{
-                title: 'Configuración',
-              }}
-            />
-            
-            <Stack.Screen
-              name="Documents"
-              component={DocumentsScreen}
-              options={{
-                title: 'Mis Documentos',
-              }}
-            />
-            
-            <Stack.Screen
-              name="DeliveryConfirmation"
-              component={DeliveryConfirmationScreen as any}
-              options={{
-                title: 'Confirmar Entrega',
-                gestureEnabled: false, // Evitar que salga accidentalmente
-              }}
-            />
-            
-            <Stack.Screen
-              name="Incidents"
-              component={IncidentsScreen as any}
-              options={{
-                title: 'Reportar Incidente',
-              }}
-            />
-            
-            <Stack.Screen
-              name="Chat"
-              component={ChatScreen as any}
-              options={{
-                headerShown: false,
-              }}
-            />
-          </>
-        )}
+        <Stack.Screen
+          name="Brand"
+          component={BrandScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Registration"
+          component={RegistrationScreen as any}
+          options={{ title: 'Registro' }}
+        />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen as any}
+          options={{ title: 'Iniciar sesión' }}
+        />
+        <Stack.Screen
+          name="Main"
+          component={MainTabNavigator}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="OrderDetail"
+          component={OrderDetailScreen as any}
+          options={{ title: 'Detalles del Pedido' }}
+        />
+        <Stack.Screen
+          name="Navigation"
+          component={NavigationScreen as any}
+          options={{ title: 'Navegación', gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="Notifications"
+          component={NotificationsScreen}
+          options={{ title: 'Notificaciones' }}
+        />
+        <Stack.Screen
+          name="Emergency"
+          component={EmergencyScreen}
+          options={{ title: 'Emergencia', headerStyle: { backgroundColor: '#F44336' } }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{ title: 'Configuración' }}
+        />
+        <Stack.Screen
+          name="Documents"
+          component={DocumentsScreen}
+          options={{ title: 'Mis Documentos' }}
+        />
+        <Stack.Screen
+          name="DeliveryConfirmation"
+          component={DeliveryConfirmationScreen as any}
+          options={{ title: 'Confirmar Entrega', gestureEnabled: false }}
+        />
+        <Stack.Screen
+          name="Incidents"
+          component={IncidentsScreen as any}
+          options={{ title: 'Reportar Incidente' }}
+        />
+        <Stack.Screen
+          name="Chat"
+          component={ChatScreen as any}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

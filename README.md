@@ -2,6 +2,14 @@
 
 Aplicación móvil para conductores de BeFast, desarrollada en React Native.
 
+## ¿Qué hago ahora?
+
+- Ejecuta un solo comando en Windows para ver la app YA en Android (emulador o dispositivo):
+  
+  npm run ya
+
+- Si prefieres, también puedes usar: `npm run android` (emulador) o `npm run android:device` (dispositivo físico con USB debug).
+
 ## 🚀 Características
 
 - **Gestión de Pedidos**: Acepta y gestiona pedidos de entrega en tiempo real
@@ -63,3 +71,25 @@ src/
 ## 📄 Licencia
 
 Este proyecto es privado y confidencial.
+
+## 🚀 Ejecución rápida en Windows (Android)
+
+Para ver la app YA en Android sin pasos manuales:
+
+- Emulador Android (AVD):
+  1) Abre un emulador desde Android Studio.
+  2) En la raíz del proyecto, ejecuta:
+     
+     npm run android:oneclick
+
+- Dispositivo físico (USB):
+  1) Activa Depuración USB y conecta tu teléfono. Acepta la huella RSA.
+  2) En la raíz del proyecto, ejecuta:
+     
+     npm run android:oneclick:device
+
+Esto abrirá Metro en otra ventana y compilará/instalará la app automáticamente. Si Metro ya está abierto, no hay problema.
+
+Notas:
+- Si aparece algún error de ADB, asegúrate de tener Android Platform Tools en el PATH y el dispositivo visible con `adb devices`.
+- La clave de Google Maps (MAPS_API_KEY) ya está configurada en android/gradle.properties para desarrollo local.
