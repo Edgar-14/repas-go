@@ -3,9 +3,11 @@ import React, { useEffect } from 'react';
 import { StatusBar, Alert } from 'react-native';
 import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { store } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initializeFirebase, setupNotificationListeners } from './src/config/firebase';
+import NotificationHandler from './src/components/NotificationHandler';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -39,7 +41,9 @@ const App: React.FC = () => {
           backgroundColor="#FF6B35"
           translucent={false}
         />
+        <NotificationHandler />
         <AppNavigator />
+        <Toast />
       </SafeAreaProvider>
     </Provider>
   );

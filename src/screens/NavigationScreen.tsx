@@ -7,11 +7,14 @@ import {
   StyleSheet,
   Alert,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { updateOrderStatus, completeOrder } from '../store/slices/ordersSlice';
 import { NavigationProps, OrderStatus } from '../types';
+import TrackingMap from '../components/TrackingMap';
+import LocationService from '../services/LocationService';
 
 interface NavigationScreenProps extends NavigationProps {
   route: {
@@ -123,13 +126,44 @@ const NavigationScreen: React.FC<NavigationScreenProps> = ({ navigation, route }
   const isPickupPhase = currentStep === OrderStatus.ACCEPTED || currentStep === OrderStatus.PICKED_UP;
   const currentLocation = isPickupPhase ? activeOrder.pickup : activeOrder.delivery;
 
+  // Iniciar tracking de ubicación cuando acepta el pedido
+  useEffect(() => {
+    if (user?.uid && activeOrder) {
+      LocationService.startTracking(user.uid);
+    }
+
+    return () => {
+      LocationService.stopTracking();
+    };
+  }, [user?.uid, activeOrder]);
+
   return (
     <View style={styles.container}>
-      {/* Header con información del pedido */}
-      <View style={styles.header}>
-        <Text style={styles.orderId}>Pedido #{activeOrder.id.slice(-6)}</Text>
-        <Text style={styles.earnings}>${activeOrder.estimatedEarnings}</Text>
+      {/* Mapa interactivo en tiempo real */}
+      <View style={styles.mapContainer}>
+        <TrackingMap
+          orderId={orderId}
+          pickupLocation={{
+            latitude: activeOrder.pickup.location.latitude,
+            longitude: activeOrder.pickup.location.longitude,
+          }}
+          deliveryLocation={{
+            latitude: activeOrder.delivery.location.latitude,
+            longitude: activeOrder.delivery.location.longitude,
+          }}
+          driverId={user?.uid}
+          showRoute={true}
+          isPickupPhase={isPickupPhase}
+        />
       </View>
+
+      {/* Contenedor scrollable con información */}
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        {/* Header con información del pedido */}
+        <View style={styles.header}>
+          <Text style={styles.orderId}>Pedido #{activeOrder.id.slice(-6)}</Text>
+          <Text style={styles.earnings}>${activeOrder.estimatedEarnings}</Text>
+        </View>
 
       {/* Progreso del pedido */}
       <View style={styles.progressContainer}>
@@ -261,6 +295,7 @@ const NavigationScreen: React.FC<NavigationScreenProps> = ({ navigation, route }
       >
         <Text style={styles.emergencyButtonText}>🚨 Emergencia</Text>
       </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 };
@@ -269,6 +304,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
+  },
+  mapContainer: {
+    height: 300,
+    width: '100%',
+  },
+  scrollContainer: {
+    flex: 1,
   },
   errorContainer: {
     flex: 1,
