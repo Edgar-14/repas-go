@@ -9,8 +9,6 @@ import { RootState } from '../store';
 
 // Screens
 import {
-  BrandScreen,
-  RegistrationScreen,
   LoginScreen,
   DashboardScreen,
   OrderDetailScreen,
@@ -106,22 +104,12 @@ const AppNavigator = () => {
             fontWeight: 'bold',
           },
         }}
-        initialRouteName="Brand"
+        initialRouteName="Login"
       >
-        <Stack.Screen
-          name="Brand"
-          component={BrandScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Registration"
-          component={RegistrationScreen as any}
-          options={{ title: 'Registro' }}
-        />
         <Stack.Screen
           name="Login"
           component={LoginScreen as any}
-          options={{ title: 'Iniciar sesión' }}
+          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="Main"

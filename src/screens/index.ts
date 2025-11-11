@@ -1,6 +1,4 @@
 // Exportaciones centralizadas de todas las pantallas
-export { default as BrandScreen } from './BrandScreen';
-export { default as RegistrationScreen } from './RegistrationScreen';
 export { default as LoginScreen } from './LoginScreen';
 export { default as DashboardScreen } from './DashboardScreen';
 export { default as OrderDetailScreen } from './OrderDetailScreen';
