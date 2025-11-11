@@ -1,12 +1,21 @@
-// Configuración de Firebase para BeFast GO
-// Nota: En React Native (con @react-native-firebase) NO se usa la config web ni initializeApp manual.
-// La app [DEFAULT] se inicializa nativamente leyendo android/app/google-services.json.
+// Configuración de Firebase para BeFast GO - Proyecto: befast-hfkbl
+// Integración con ecosistema BeFast existente
 import firebase from '@react-native-firebase/app';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
 import storage from '@react-native-firebase/storage';
 import functions from '@react-native-firebase/functions';
+
+// Configuración del proyecto (coincide con google-services.json)
+const firebaseConfig = {
+  projectId: "befast-hfkbl",
+  authDomain: "befast-hfkbl.firebaseapp.com",
+  databaseURL: "https://befast-hfkbl-default-rtdb.firebaseio.com",
+  storageBucket: "befast-hfkbl.firebasestorage.app",
+  messagingSenderId: "897579485656",
+  appId: "1:897579485656:android:c307afdda53e9328a84aad"
+};
 
 // Colecciones de Firestore (usar exactamente estas)
 export const COLLECTIONS = {
@@ -40,6 +49,7 @@ export const CLOUD_FUNCTIONS = {
 
 // Exportar instancias de Firebase
 export { auth, firestore, messaging, storage, functions };
+export const db = firestore();
 
 // Función para inicializar Firebase
 export const initializeFirebase = async () => {

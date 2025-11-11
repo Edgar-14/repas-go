@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MapView, { Circle } from 'react-native-maps';
+import SimpleIcon from '../components/ui/SimpleIcon';
 
-const NavigationScreen: React.FC = () => {
+interface NavigationProps {
+  navigation?: {
+    navigate: (screen: string) => void;
+  };
+}
+
+const NavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
 
     const legendItems = [
         { color: '#D63031', label: 'Alta Demanda' },
@@ -21,7 +28,14 @@ const NavigationScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Navegación</Text>
+                <Text style={styles.headerTitle}>Mapa de Demanda</Text>
+                <TouchableOpacity 
+                    style={styles.gpsButton}
+                    onPress={() => navigation?.navigate('GPSNavigation')}
+                >
+                    <SimpleIcon type="navigation" size={20} color="#FFFFFF" />
+                    <Text style={styles.gpsButtonText}>GPS</Text>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.content}>
@@ -116,6 +130,22 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#2D3748',
+    },
+    gpsButton: {
+        backgroundColor: '#007AFF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        position: 'absolute',
+        right: 16,
+    },
+    gpsButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginLeft: 4,
     },
     content: {
         padding: 16,

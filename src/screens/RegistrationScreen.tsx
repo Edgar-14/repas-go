@@ -1,23 +1,52 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+// Importas el componente de íconos REAL
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// NOTE: For document picking, a library like 'react-native-document-picker' would be needed.
-// import DocumentPicker, { DocumentPickerResponse } from 'react-native-document-picker';
+// --- INICIO DE CORRECCIÓN: Definición de Iconos ---
+// Los componentes <User>, <Lock>, etc., no existen. 
+// Debemos crearlos usando la librería que SÍ importaste.
+const User = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="account-outline" size={props.size || 20} color={props.color} style={props.style} />;
+const Mail = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="email-outline" size={props.size || 20} color={props.color} style={props.style} />;
+const Phone = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="phone-outline" size={props.size || 20} color={props.color} style={props.style} />;
+const Lock = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="lock-outline" size={props.size || 20} color={props.color} style={props.style} />;
+const Bike = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="motorbike" size={props.size || 32} color={props.color} style={props.style} />;
+const Car = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="car-outline" size={props.size || 32} color={props.color} style={props.style} />;
+const Banknote = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="bank-outline" size={props.size || 20} color={props.color} style={props.style} />;
+const FileUp = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="file-upload-outline" size={props.size || 24} color={props.color} style={props.style} />;
+const CheckCircle = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="check-circle" size={props.size || 24} color={props.color} style={props.style} />;
+const Check = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="check" size={props.size || 12} color={props.color} style={props.style} />;
+const FileText = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="file-document-outline" size={props.size || 20} color={props.color} style={props.style} />;
+const Video = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="video-outline" size={props.size || 48} color={props.color} style={props.style} />;
+const Send = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="send-outline" size={props.size || 64} color={props.color} style={props.style} />;
+const ArrowLeft = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="arrow-left" size={props.size || 24} color={props.color} style={props.style} />;
+// --- FIN DE CORRECCIÓN ---
 
 
 const RegistrationScreen: React.FC = () => {
     const navigation = useNavigation();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
-        fullName: '', email: '', phone: '', password: '', vehicleType: 'motorcycle',
-        vehicleMake: '', vehicleModel: '', vehiclePlate: '', bankAccountHolder: '',
-        bankAccountCLABE: '', termsAccepted: false,
+        // Step 1
+        fullName: '', email: '', phone: '', password: '',
+        rfc: '', curp: '', nss: '', // CORRECCIÓN: Cambiado 'umf' por 'nss' para que coincida con tu input
+        vehicleType: 'motorcycle', vehicleMake: '', vehicleModel: '', vehiclePlate: '',
+        bankAccountHolder: '', bankAccountCLABE: '',
+        // Step 2
+        idDoc: null as any | null,
+        satDoc: null as any | null,
         licenseDoc: null as any | null,
         registrationDoc: null as any | null,
-        idDoc: null as any | null,
+        // Step 3
+        agreementsAccepted: false,
+        // Step 4
+        quizAnswer: '',
+        equipmentPhoto: null as any | null,
+        // Step 5
+        termsAccepted: false,
     });
+    const isQuizCorrect = formData.quizAnswer === 'B';
 
     const handleNext = () => setStep(prev => Math.min(prev + 1, 6));
     const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
@@ -27,8 +56,8 @@ const RegistrationScreen: React.FC = () => {
     };
     
     const handleFilePick = async (name: string) => {
-        // Mock file picker
-        const mockFile = { name: `${name}.pdf`, size: 12345, type: 'application/pdf' };
+        // Simulación. Aquí deberías usar 'react-native-document-picker'
+        const mockFile = { name: `${name}-seleccionado.pdf`, size: 12345, type: 'application/pdf' };
         setFormData(prev => ({ ...prev, [name]: mockFile }));
     };
     
@@ -37,10 +66,12 @@ const RegistrationScreen: React.FC = () => {
         handleNext();
     };
 
+    // Componente FileUpload con íconos corregidos
     const FileUpload: React.FC<{ name: string; label: string; file: any | null;}> = ({ name, label, file }) => (
         <View style={[styles.fileUploadContainer, file && styles.fileUploadComplete]}>
             <View style={styles.fileInfo}>
-                {file ? <TickCircle size={20} color="#00B894" /> : <DocumentUpload size={20} color="#718096" />}
+                {/* ÍCONOS CORREGIDOS */}
+                {file ? <CheckCircle color="#00B894" /> : <FileUp color="#718096" />}
                 <View style={styles.fileTextContainer}>
                     <Text style={styles.fileLabel}>{label}</Text>
                     {file && <Text style={styles.fileName}>{file.name}</Text>}
@@ -54,79 +85,144 @@ const RegistrationScreen: React.FC = () => {
     
     const renderStep = () => {
         switch(step) {
-            case 1:
+            case 1: // Coincide con 1.1 Datos Personales y Laborales
                 return (
-                     <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Información Personal</Text>
-                        <Text style={styles.stepSubtitle}>Comencemos con tus datos básicos.</Text>
-                         <View style={styles.inputContainer}><Profile style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Nombre Completo" value={formData.fullName} onChangeText={v => handleInputChange('fullName', v)} style={styles.input} /></View>
-                         <View style={styles.inputContainer}><Sms style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Email" value={formData.email} onChangeText={v => handleInputChange('email', v)} style={styles.input} keyboardType="email-address" /></View>
-                         <View style={styles.inputContainer}><Call style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Teléfono" value={formData.phone} onChangeText={v => handleInputChange('phone', v)} style={styles.input} keyboardType="phone-pad" /></View>
-                         <View style={styles.inputContainer}><Lock style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Contraseña" value={formData.password} onChangeText={v => handleInputChange('password', v)} style={styles.input} secureTextEntry /></View>
+                    <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Datos Personales y Laborales</Text>
+                        <Text style={styles.stepSubtitle}>Completa tu información personal, de vehículo y bancaria.</Text>
+                        <ScrollView>
+                            <Text style={styles.sectionTitle}>Información Personal</Text>
+                            {/* --- Inputs con íconos corregidos --- */}
+                            <View style={styles.inputContainer}>
+                                <User style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="Nombre Completo" value={formData.fullName} onChangeText={v => handleInputChange('fullName', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <TextInput placeholder="RFC" value={formData.rfc} onChangeText={v => handleInputChange('rfc', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <TextInput placeholder="CURP" value={formData.curp} onChangeText={v => handleInputChange('curp', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                {/* CORRECCIÓN: Este input era para 'nss' pero tu state tenía 'umf' */}
+                                <TextInput placeholder="NSS (Número de Seguro Social)" value={formData.nss} onChangeText={v => handleInputChange('nss', v)} style={styles.input} keyboardType="number-pad" placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Mail style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="Email" value={formData.email} onChangeText={v => handleInputChange('email', v)} style={styles.input} keyboardType="email-address" placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Phone style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="Teléfono" value={formData.phone} onChangeText={v => handleInputChange('phone', v)} style={styles.input} keyboardType="phone-pad" placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Lock style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="Contraseña" value={formData.password} onChangeText={v => handleInputChange('password', v)} style={styles.input} secureTextEntry placeholderTextColor="#A0AEC0" />
+                            </View>
+                            
+                            <Text style={styles.sectionTitle}>Información del Vehículo</Text>
+                            <View style={styles.vehicleOptions}>
+                                <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'motorcycle')} style={[styles.vehicleButton, formData.vehicleType === 'motorcycle' && styles.vehicleButtonActive]}>
+                                    <Bike size={32} color={formData.vehicleType === 'motorcycle' ? '#00B894' : '#2D3748'} />
+                                    <Text style={[styles.vehicleText, formData.vehicleType === 'motorcycle' && styles.vehicleTextActive]}>Motocicleta</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'car')} style={[styles.vehicleButton, formData.vehicleType === 'car' && styles.vehicleButtonActive]}>
+                                    <Car size={32} color={formData.vehicleType === 'car' ? '#00B894' : '#2D3748'} />
+                                    <Text style={[styles.vehicleText, formData.vehicleType === 'car' && styles.vehicleTextActive]}>Automóvil</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <TextInput placeholder="Marca" value={formData.vehicleMake} onChangeText={v => handleInputChange('vehicleMake', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            <TextInput placeholder="Modelo" value={formData.vehicleModel} onChangeText={v => handleInputChange('vehicleModel', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            <TextInput placeholder="Placa" value={formData.vehiclePlate} onChangeText={v => handleInputChange('vehiclePlate', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+
+                            <Text style={styles.sectionTitle}>Información Bancaria</Text>
+                            <View style={styles.inputContainer}>
+                                <User style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="Nombre del Titular" value={formData.bankAccountHolder} onChangeText={v => handleInputChange('bankAccountHolder', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Banknote style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="CLABE Interbancaria (18 dígitos)" value={formData.bankAccountCLABE} onChangeText={v => handleInputChange('bankAccountCLABE', v)} style={styles.input} keyboardType="number-pad" placeholderTextColor="#A0AEC0" />
+                            </View>
+                        </ScrollView>
                         <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
                     </View>
                 );
-            case 2:
-                 return (
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Detalles del Vehículo</Text>
-                        <Text style={styles.stepSubtitle}>¿Qué vehículo usarás?</Text>
-                        <View style={styles.vehicleOptions}>
-                            <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'motorcycle')} style={[styles.vehicleButton, formData.vehicleType === 'motorcycle' && styles.vehicleButtonActive]}><CarIcon size={32} color={formData.vehicleType === 'motorcycle' ? '#00B894' : '#718096'} /><Text>Motocicleta</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'car')} style={[styles.vehicleButton, formData.vehicleType === 'car' && styles.vehicleButtonActive]}><CarIcon size={32} color={formData.vehicleType === 'car' ? '#00B894' : '#718096'} /><Text>Automóvil</Text></TouchableOpacity>
-                        </View>
-                        <TextInput placeholder="Marca" value={formData.vehicleMake} onChangeText={v => handleInputChange('vehicleMake', v)} style={styles.input} />
-                        <TextInput placeholder="Modelo" value={formData.vehicleModel} onChangeText={v => handleInputChange('vehicleModel', v)} style={styles.input} />
-                        <TextInput placeholder="Placa" value={formData.vehiclePlate} onChangeText={v => handleInputChange('vehiclePlate', v)} style={styles.input} />
-                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
-                    </View>
-                );
-            case 3:
+            case 2: // Coincide con 1.2 Documentación Legal
                 return (
                     <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Carga de Documentos</Text>
-                        <Text style={styles.stepSubtitle}>Necesitamos verificar tu identidad.</Text>
-                        <FileUpload name="licenseDoc" label="Licencia de Conducir" file={formData.licenseDoc} />
-                        <FileUpload name="registrationDoc" label="Tarjeta de Circulación" file={formData.registrationDoc} />
+                        <Text style={styles.stepTitle}>Documentación Legal</Text>
+                        <Text style={styles.stepSubtitle}>Sube tus documentos obligatorios.</Text>
                         <FileUpload name="idDoc" label="Identificación Oficial (INE)" file={formData.idDoc} />
+                        <FileUpload name="satDoc" label="Constancia de Situación Fiscal (SAT)" file={formData.satDoc} />
+                        <FileUpload name="licenseDoc" label="Licencia de Conducir Vigente" file={formData.licenseDoc} />
+                        <FileUpload name="registrationDoc" label="Tarjeta de Circulación" file={formData.registrationDoc} />
                         <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
                     </View>
                 );
-            case 4:
+            case 3: // Coincide con 1.3 Acuerdos Legales y Firma
                 return (
                     <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Información de Pago</Text>
-                        <Text style={styles.stepSubtitle}>¿Dónde depositaremos tus ganancias?</Text>
-                        <View style={styles.inputContainer}><Profile style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Nombre del Titular" value={formData.bankAccountHolder} onChangeText={v => handleInputChange('bankAccountHolder', v)} style={styles.input} /></View>
-                        <View style={styles.inputContainer}><MoneyRecive style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="CLABE Interbancaria (18 dígitos)" value={formData.bankAccountCLABE} onChangeText={v => handleInputChange('bankAccountCLABE', v)} style={styles.input} keyboardType="number-pad" /></View>
-                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
+                        <Text style={styles.stepTitle}>Acuerdos Legales y Firma</Text>
+                        <Text style={styles.stepSubtitle}>Revisa y acepta los siguientes documentos para continuar.</Text>
+                        <View style={styles.documentList}>
+                            <View style={styles.documentItem}><FileText color="#4A5568" /><Text style={styles.documentText}>Política de Gestión Algorítmica</Text></View>
+                            <View style={styles.documentItem}><FileText color="#4A5568" /><Text style={styles.documentText}>Instructivo de Llenado</Text></View>
+                            <View style={styles.documentItem}><FileText color="#4A5568" /><Text style={styles.documentText}>Contrato de Trabajo</Text></View>
+                        </View>
+                        <TouchableOpacity style={styles.termsRow} onPress={() => handleInputChange('agreementsAccepted', !formData.agreementsAccepted)}>
+                            <View style={[styles.checkbox, formData.agreementsAccepted && styles.checkboxChecked]}>{formData.agreementsAccepted && <Check color="white" size={12}/>}</View>
+                            <Text style={styles.termsText}>He leído y firmo de conformidad los documentos listados.</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleNext} disabled={!formData.agreementsAccepted} style={[styles.nextButton, !formData.agreementsAccepted && styles.disabledButton]}><Text style={styles.nextButtonText}>Firmar y Continuar</Text></TouchableOpacity>
                     </View>
                 );
-            case 5:
+            case 4: // Coincide con 1.4 Capacitación Obligatoria
                 return (
-                     <View style={styles.stepContainer}>
+                    <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Capacitación Obligatoria</Text>
+                        <Text style={styles.stepSubtitle}>Completa la capacitación para asegurar un servicio de calidad.</Text>
+                        <View style={styles.videoPlaceholder}><Video size={48} color="#A0AEC0" /><Text style={styles.videoText}>Video de Capacitación</Text></View>
+                        
+                        <View style={styles.quizContainer}>
+                            <Text style={styles.quizQuestion}>¿Qué es lo primero que debes hacer al llegar al punto de entrega?</Text>
+                            <TouchableOpacity onPress={() => handleInputChange('quizAnswer', 'A')} style={styles.quizOption}><View style={[styles.radio, formData.quizAnswer === 'A' && styles.radioChecked]} /><Text style={styles.quizOptionText}>A. Tocar el timbre</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleInputChange('quizAnswer', 'B')} style={styles.quizOption}><View style={[styles.radio, formData.quizAnswer === 'B' && styles.radioChecked]} /><Text style={styles.quizOptionText}>B. Verificar la dirección en la app</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleInputChange('quizAnswer', 'C')} style={styles.quizOption}><View style={[styles.radio, formData.quizAnswer === 'C' && styles.radioChecked]} /><Text style={styles.quizOptionText}>C. Llamar al cliente</Text></TouchableOpacity>
+                            {formData.quizAnswer && !isQuizCorrect && <Text style={styles.quizFeedback}>Respuesta incorrecta. Intenta de nuevo.</Text>}
+                        </View>
+                        
+                        <FileUpload name="equipmentPhoto" label="Evidencia de Equipo de Trabajo" file={formData.equipmentPhoto} />
+                        <TouchableOpacity onPress={handleNext} disabled={!isQuizCorrect || !formData.equipmentPhoto} style={[styles.nextButton, (!isQuizCorrect || !formData.equipmentPhoto) && styles.disabledButton]}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
+                    </View>
+                );
+            case 5: // Coincide con 1.5 Confirmación y Envío
+                return (
+                    <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Revisión Final</Text>
                         <Text style={styles.stepSubtitle}>Confirma que tu información es correcta.</Text>
                         <ScrollView style={styles.reviewBox}>
-                            <Text><Text style={{fontWeight: 'bold'}}>Nombre:</Text> {formData.fullName}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Email:</Text> {formData.email}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Vehículo:</Text> {formData.vehicleMake} {formData.vehicleModel}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Placa:</Text> {formData.vehiclePlate}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Documentos:</Text> {formData.licenseDoc ? '✅' : '❌'} Licencia, {formData.registrationDoc ? '✅' : '❌'} Tarjeta Circ., {formData.idDoc ? '✅' : '❌'} ID</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Cuenta:</Text> ****{formData.bankAccountCLABE.slice(-4)}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Nombre:</Text> {formData.fullName}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Email:</Text> {formData.email}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>RFC:</Text> {formData.rfc}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Vehículo:</Text> {formData.vehicleMake} {formData.vehicleModel} ({formData.vehiclePlate})</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Documentos:</Text> {formData.idDoc ? '✅' : '❌'} INE, {formData.satDoc ? '✅' : '❌'} SAT, {formData.licenseDoc ? '✅' : '❌'} Licencia, {formData.registrationDoc ? '✅' : '❌'} T. Circulación</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Acuerdos:</Text> {formData.agreementsAccepted ? '✅ Firmados' : '❌ Pendientes'}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Capacitación:</Text> {isQuizCorrect && formData.equipmentPhoto ? '✅ Completada' : '❌ Incompleta'}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Cuenta:</Text> ****{formData.bankAccountCLABE.slice(-4)}</Text>
                         </ScrollView>
                         <TouchableOpacity style={styles.termsRow} onPress={() => handleInputChange('termsAccepted', !formData.termsAccepted)}>
-                           <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <TickSquare size={12} color="#FFFFFF" />}</View>
-                           <Text style={styles.termsText}>Acepto los <Text style={styles.linkText}>Términos y Condiciones</Text>.</Text>
+                            <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <Check color="white" size={12}/>}</View>
+                            <Text style={styles.termsText}>Confirmo que toda la información es correcta y acepto los <Text style={styles.linkText}>Términos y Condiciones</Text>.</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={handleSubmit} disabled={!formData.termsAccepted} style={[styles.nextButton, !formData.termsAccepted && styles.disabledButton]}><Text style={styles.nextButtonText}>Enviar Solicitud</Text></TouchableOpacity>
                     </View>
                 );
-            case 6:
+            case 6: // Pantalla de éxito
                 return (
                     <View style={styles.stepContainer}>
-                         <Send2 size={64} color="#00B894" style={{alignSelf: 'center'}} />
-                         <Text style={styles.stepTitle}>Solicitud Enviada</Text>
+                        <Send size={64} color="#00B894" style={{alignSelf: 'center'}}/>
+                        <Text style={styles.stepTitle}>Solicitud Enviada</Text>
                         <Text style={styles.stepSubtitle}>Gracias por registrarte. Revisaremos tu información y te notificaremos por correo electrónico en un plazo de 2-3 días hábiles.</Text>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.nextButton}>
                             <Text style={styles.nextButtonText}>Entendido</Text>
@@ -142,16 +238,22 @@ const RegistrationScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : (step <= 5 ? handleBack() : navigation.goBack())} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#2D3748" />
+                    {/* ÍCONO CORREGIDO */}
+                    <ArrowLeft color="#2D3748" />
                 </TouchableOpacity>
                 {step <= 5 && (
-                  <View style={styles.progressBarContainer}>
-                      <View style={[styles.progressBar, { width: `${(step / 5) * 100}%` }]} />
-                  </View>
+                    <View style={styles.progressBarContainer}>
+                        <View style={[styles.progressBar, { width: `${(step / 5) * 100}%` }]} />
+                    </View>
                 )}
             </View>
+            {/* CORRECCIÓN: Cambiado ScrollView por View para el paso 1 y 6, 
+                ScrollView para los demás para evitar anidamiento.
+                Actualización: Mejorado para que el ScrollView sea el contenedor principal
+                y el stepContainer crezca.
+            */}
             <ScrollView contentContainerStyle={styles.scrollContainer}>
-              {renderStep()}
+                {renderStep()}
             </ScrollView>
         </SafeAreaView>
     );
@@ -159,37 +261,54 @@ const RegistrationScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white' },
-    header: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-    backButton: { padding: 8 },
-    progressBarContainer: { flex: 1, height: 10, backgroundColor: '#EDF2F7', borderRadius: 5, marginLeft: 16 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+    backButton: { padding: 8, marginRight: 8 },
+    progressBarContainer: { flex: 1, height: 10, backgroundColor: '#EDF2F7', borderRadius: 5, overflow: 'hidden' },
     progressBar: { height: '100%', backgroundColor: '#00B894', borderRadius: 5 },
-    scrollContainer: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-    stepContainer: { width: '100%' },
+    scrollContainer: { flexGrow: 1, justifyContent: 'flex-start', padding: 24, paddingTop: 16 }, // Ajustado el padding
+    stepContainer: { flex: 1, width: '100%', justifyContent: 'space-between' }, // Permite que el contenido crezca
     stepTitle: { fontSize: 28, fontWeight: 'bold', color: '#2D3748', marginBottom: 8, textAlign: 'center' },
     stepSubtitle: { fontSize: 16, color: '#718096', marginBottom: 24, textAlign: 'center' },
+    sectionTitle: { fontSize: 16, fontWeight: '600', color: '#4A5568', marginTop: 16, marginBottom: 12 }, // Ajustado margen
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, marginBottom: 16 },
-    inputIcon: { position: 'absolute', left: 12 },
-    input: { flex: 1, height: 50, paddingLeft: 40, paddingRight: 16, fontSize: 16 },
-    nextButton: { backgroundColor: '#00B894', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16 },
+    inputIcon: { marginLeft: 12 }, // Ajustado para que no esté absoluto
+    input: { flex: 1, height: 50, paddingHorizontal: 16, fontSize: 16, color: '#2D3748' }, // Ajustado padding
+    nextButton: { backgroundColor: '#00B894', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 16 }, // Añadido margen inferior
     nextButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     disabledButton: { backgroundColor: '#A0AEC0' },
     vehicleOptions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-    vehicleButton: { flex: 1, padding: 16, borderWidth: 2, borderRadius: 8, alignItems: 'center', borderColor: '#E2E8F0', marginHorizontal: 8 },
+    vehicleButton: { flex: 1, paddingVertical: 12, borderWidth: 2, borderRadius: 8, alignItems: 'center', borderColor: '#E2E8F0', marginHorizontal: 8, justifyContent: 'center' },
     vehicleButtonActive: { borderColor: '#00B894', backgroundColor: 'rgba(0, 184, 148, 0.1)' },
+    vehicleText: { marginTop: 4, color: '#2D3748', fontWeight: '500' },
+    vehicleTextActive: { color: '#00B894', fontWeight: '600' },
     fileUploadContainer: { width: '100%', padding: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: '#CBD5E0', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    fileUploadComplete: { borderColor: '#00B894', borderStyle: 'solid' },
-    fileInfo: { flexDirection: 'row', alignItems: 'center' },
-    fileTextContainer: { marginLeft: 12 },
-    fileLabel: { fontWeight: '600', color: '#2D3748' },
-    fileName: { fontSize: 12, color: '#718096' },
-    uploadButton: { backgroundColor: '#EDF2F7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+    fileUploadComplete: { borderColor: '#00B894', borderStyle: 'solid', backgroundColor: '#F0FFF4' },
+    fileInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 }, // Añadido flex 1
+    fileTextContainer: { marginLeft: 12, flex: 1 }, // Añadido flex 1 para que el texto se corte
+    fileLabel: { fontWeight: '600', color: '#2D3748', fontSize: 15 },
+    fileName: { fontSize: 12, color: '#718096', marginTop: 2 },
+    uploadButton: { backgroundColor: '#EDF2F7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginLeft: 8 },
     uploadButtonText: { color: '#4A5568', fontWeight: '600' },
-    reviewBox: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, maxHeight: 200, marginBottom: 16 },
-    termsRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
-    checkbox: { width: 20, height: 20, borderWidth: 2, borderColor: '#CBD5E0', borderRadius: 4, justifyContent: 'center', alignItems: 'center' },
+    reviewBox: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, maxHeight: 250, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }, // Ajustada altura
+    reviewText: { fontSize: 14, color: '#4A5568', marginBottom: 6 },
+    reviewLabel: { fontWeight: 'bold', color: '#2D3748' },
+    termsRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16, marginTop: 16 },
+    checkbox: { width: 20, height: 20, borderWidth: 2, borderColor: '#CBD5E0', borderRadius: 4, justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 },
     checkboxChecked: { backgroundColor: '#00B894', borderColor: '#00B894' },
-    termsText: { flex: 1, marginLeft: 12, color: '#718096', fontSize: 14 },
-    linkText: { color: '#00B894', fontWeight: '600' },
+    termsText: { flex: 1, color: '#718096', fontSize: 14, lineHeight: 20 },
+    linkText: { color: '#00B894', fontWeight: '600', textDecorationLine: 'underline' },
+    documentList: { backgroundColor: '#F7FAFC', borderRadius: 8, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+    documentItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+    documentText: { marginLeft: 12, color: '#2D3748', fontSize: 16, fontWeight: '500' },
+    videoPlaceholder: { height: 180, backgroundColor: '#EDF2F7', borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+    videoText: { color: '#A0AEC0', marginTop: 8, fontWeight: '500' },
+    quizContainer: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+    quizQuestion: { fontWeight: '600', color: '#2D3748', marginBottom: 12, fontSize: 15 },
+    quizOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+    quizOptionText: { color: '#4A5568', fontSize: 15 },
+    radio: { width: 20, height: 20, borderWidth: 2, borderRadius: 10, borderColor: '#CBD5E0', marginRight: 12, justifyContent: 'center', alignItems: 'center' },
+    radioChecked: { borderColor: '#00B894', borderWidth: 6 }, // Estilo de radio "lleno"
+    quizFeedback: { color: '#D63031', fontSize: 13, marginTop: 8, fontWeight: '500' },
 });
 
 export default RegistrationScreen;

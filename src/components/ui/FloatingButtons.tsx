@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Animated } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Bot, AlertTriangle, LifeBuoy, X } from 'lucide-react-native';
 import Chatbot from '../chatbot/Chatbot';
 import EmergencyOptionsModal from '../modals/EmergencyOptionsModal';
 
@@ -75,7 +75,7 @@ const FloatingButtons: React.FC = () => {
                         style={[styles.secondaryButton, styles.emergencyButton]}
                         aria-label="Opciones de Emergencia"
                     >
-                        <MaterialCommunityIcons name="alert-triangle" size={24} color="white" />
+                        <AlertTriangle size={24} color="white" />
                     </TouchableOpacity>
                     <View style={styles.labelContainer}>
                         <Text style={styles.labelText}>Emergencia</Text>
@@ -88,7 +88,7 @@ const FloatingButtons: React.FC = () => {
                         style={[styles.secondaryButton, styles.chatbotButton]}
                         aria-label="Abrir Asistente Virtual"
                     >
-                        <MaterialCommunityIcons name="robot" size={24} color="white" />
+                        <Bot size={24} color="white" />
                     </TouchableOpacity>
                     <View style={styles.labelContainer}>
                         <Text style={styles.labelText}>Asistente</Text>
@@ -101,7 +101,7 @@ const FloatingButtons: React.FC = () => {
                     aria-label="Abrir menú de ayuda"
                 >
                     <Animated.View style={rotation}>
-                       <MaterialCommunityIcons name={isMenuOpen ? 'close' : 'lifebuoy'} size={28} color="white" />
+                       {isMenuOpen ? <X size={28} color="white" /> : <LifeBuoy size={28} color="white" />}
                     </Animated.View>
                 </TouchableOpacity>
             </View>

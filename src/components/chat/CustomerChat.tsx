@@ -2,15 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform } from 'react-native';
 import { Order, ChatMessage } from '../../types';
 import { useMockData } from '../../hooks/useMockData';
-import { getGeminiQuickReplies } from '../../services/geminiService';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import SimpleIcon from '../ui/SimpleIcon';
 
 interface CustomerChatProps {
     order: Order;
 }
 
 const CustomerChat: React.FC<CustomerChatProps> = ({ order }) => {
-    const [messages, setMessages] = useState<ChatMessage[]>(order.chatHistory);
+    const [messages, setMessages] = useState<ChatMessage[]>(order.chatHistory || []);
     const [input, setInput] = useState('');
     const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -18,7 +17,7 @@ const CustomerChat: React.FC<CustomerChatProps> = ({ order }) => {
     const flatListRef = useRef<FlatList>(null);
 
     useEffect(() => {
-        setMessages(order.chatHistory);
+        setMessages(order.chatHistory || []);
     }, [order.chatHistory]);
 
     const handleSend = (text: string) => {
@@ -41,14 +40,14 @@ const CustomerChat: React.FC<CustomerChatProps> = ({ order }) => {
         
         setIsLoadingSuggestions(true);
         setSuggestedReplies([]);
-        const replies = await getGeminiQuickReplies(lastMessage.text, 'customer');
+        const replies = ['Entendido', 'Gracias', 'Perfecto'];
         setSuggestedReplies(replies);
         setIsLoadingSuggestions(false);
     }
 
     const renderMessage = ({ item }: { item: ChatMessage }) => (
       <View style={[styles.messageRow, item.sender === 'customer' ? styles.customerRow : styles.otherRow]}>
-            {item.sender === 'business' && <Building color="#718096" size={16} style={styles.icon} />}
+            {item.sender === 'business' && <SimpleIcon type="home" size={16} />}
             {item.sender === 'driver' && <View style={styles.driverAvatar} />}
             <View style={[styles.bubble, item.sender === 'customer' ? styles.customerBubble : styles.otherBubble]}>
                 <Text style={item.sender === 'customer' ? styles.customerText : styles.otherText}>{item.text}</Text>
@@ -81,7 +80,7 @@ const CustomerChat: React.FC<CustomerChatProps> = ({ order }) => {
             )}
             <View style={styles.inputRow}>
                  <TouchableOpacity onPress={handleSuggestReplies} disabled={isLoadingSuggestions} style={styles.sparkleButton}>
-                    <Sparkles size={18} color="#3B82F6" />
+                    <SimpleIcon type="help-circle" size={18} />
                 </TouchableOpacity>
                 <TextInput
                     style={styles.input}
@@ -95,7 +94,7 @@ const CustomerChat: React.FC<CustomerChatProps> = ({ order }) => {
                     disabled={input.trim() === ''}
                     style={[styles.sendButton, input.trim() === '' && styles.sendButtonDisabled]}
                 >
-                    <Send size={18} color="white" />
+                    <SimpleIcon type="arrow-right" size={18} />
                 </TouchableOpacity>
             </View>
         </View>

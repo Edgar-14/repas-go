@@ -21,3 +21,4 @@ export { default as OrderRatingScreen } from './OrderRatingScreen';
 export { default as OnboardingScreen } from './OnboardingScreen';
 export { default as RegistrationScreen } from './RegistrationScreen';
 export { default as WalletScreen } from './WalletScreen';
+export { default as GPSNavigationScreen } from './GPSNavigationScreen';

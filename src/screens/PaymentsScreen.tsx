@@ -14,6 +14,15 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
         pendingDebts: 0,
         weeklyEarnings: 2450.30
     };
+    
+    const stats = {
+        weeklyEarnings: 2450.30,
+        monthlyEarnings: 8450.90,
+        totalTips: 340.50,
+        totalBonuses: 125.00,
+        cardOrders: 18,
+        cashOrders: 12
+    };
 
     const transactions = [
         { id: '1', type: 'EARNING', amount: 85.50, description: 'Entrega #12345', date: '2024-01-15', status: 'COMPLETED' },
@@ -78,10 +87,41 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Weekly Earnings */}
-                <View style={styles.earningsCard}>
-                    <Text style={styles.earningsLabel}>Ganancias de la Semana</Text>
-                    <Text style={styles.earningsAmount}>${wallet.weeklyEarnings.toFixed(2)}</Text>
+                {/* Earnings Widgets */}
+                <View style={styles.widgetsContainer}>
+                    <View style={[styles.earningsCard, styles.widget]}>
+                        <Text style={styles.earningsLabel}>Semana</Text>
+                        <Text style={styles.earningsAmount}>${stats.weeklyEarnings.toFixed(2)}</Text>
+                    </View>
+                    
+                    <View style={[styles.earningsCard, styles.widget]}>
+                        <Text style={styles.earningsLabel}>Mes</Text>
+                        <Text style={styles.earningsAmount}>${stats.monthlyEarnings.toFixed(2)}</Text>
+                    </View>
+                </View>
+                
+                <View style={styles.widgetsContainer}>
+                    <View style={[styles.earningsCard, styles.widget]}>
+                        <Text style={styles.earningsLabel}>Propinas</Text>
+                        <Text style={styles.earningsAmount}>${stats.totalTips.toFixed(2)}</Text>
+                    </View>
+                    
+                    <View style={[styles.earningsCard, styles.widget]}>
+                        <Text style={styles.earningsLabel}>Bonos</Text>
+                        <Text style={styles.earningsAmount}>${stats.totalBonuses.toFixed(2)}</Text>
+                    </View>
+                </View>
+                
+                <View style={styles.widgetsContainer}>
+                    <View style={[styles.earningsCard, styles.widget]}>
+                        <Text style={styles.earningsLabel}>💳 Tarjeta</Text>
+                        <Text style={styles.ordersAmount}>{stats.cardOrders}</Text>
+                    </View>
+                    
+                    <View style={[styles.earningsCard, styles.widget]}>
+                        <Text style={styles.earningsLabel}>💵 Efectivo</Text>
+                        <Text style={styles.ordersAmount}>{stats.cashOrders}</Text>
+                    </View>
                 </View>
 
                 {/* Transactions */}
@@ -229,6 +269,20 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+    widgetsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    widget: {
+        flex: 0.48,
+    },
+    ordersAmount: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#2D3748',
+    },
+
 
 });
 

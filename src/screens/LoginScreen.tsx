@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, StatusBar, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
-interface NavigationProps {
-  navigation?: {
-    navigate: (screen: string) => void;
-  };
-}
-
-const LoginScreen: React.FC<NavigationProps> = ({ navigation }) => {
+const LoginScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,18 +12,19 @@ const LoginScreen: React.FC<NavigationProps> = ({ navigation }) => {
     // Mock login logic
     if (email.toLowerCase() === 'driver@befast.com' && password === 'password') {
       console.log('Login successful');
-      navigation?.navigate('Main');
+      navigation.navigate('Main');
     } else {
       setError('Email o contraseña incorrectos.');
     }
   };
   
   const handleCreateAccount = () => {
-    navigation?.navigate('Registration');
+    navigation.navigate('Registration');
   };
 
   const handleForgotPassword = () => {
-    navigation?.navigate('ForgotPassword');
+    // Por ahora solo muestra un mensaje
+    setError('Contacta a soporte para recuperar tu contraseña.');
   };
 
   return (

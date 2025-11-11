@@ -1,18 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Modal, SafeAreaView, FlatList, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { MockOrder, ChatMessage } from '../../types';
+import { Order, ChatMessage } from '../../types';
 import { useMockData } from '../../hooks/useMockData';
-import { getGeminiQuickReplies } from '../../services/geminiService';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import SimpleIcon from '../ui/SimpleIcon';
 
 interface DriverChatModalProps {
-    order: MockOrder;
+    order: Order;
     onClose: () => void;
     visible: boolean;
 }
 
 const DriverChatModal: React.FC<DriverChatModalProps> = ({ order, onClose, visible }) => {
-    const [messages, setMessages] = useState<ChatMessage[]>(order.chatHistory);
+    const [messages, setMessages] = useState<ChatMessage[]>(order.chatHistory || []);
     const [input, setInput] = useState('');
     const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
     const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -20,7 +19,7 @@ const DriverChatModal: React.FC<DriverChatModalProps> = ({ order, onClose, visib
     const flatListRef = useRef<FlatList>(null);
     
     useEffect(() => {
-        setMessages(order.chatHistory);
+        setMessages(order.chatHistory || []);
     }, [order.chatHistory]);
 
     const handleSend = async (text: string) => {
@@ -41,14 +40,14 @@ const DriverChatModal: React.FC<DriverChatModalProps> = ({ order, onClose, visib
         
         setIsLoadingSuggestions(true);
         setSuggestedReplies([]);
-        const replies = await getGeminiQuickReplies(lastCustomerMessage.text, 'driver');
+        const replies = ['Entendido', 'En camino', 'Llegando'];
         setSuggestedReplies(replies);
         setIsLoadingSuggestions(false);
     }
     
     const renderMessage = ({ item }: { item: ChatMessage }) => (
         <View style={[styles.messageRow, item.sender === 'driver' ? styles.driverRow : styles.otherRow]}>
-            {item.sender === 'customer' && <User color="#718096" size={20} style={styles.icon} />}
+            {item.sender === 'customer' && <SimpleIcon type="account" size={20} />}
             <View style={[styles.bubble, item.sender === 'driver' ? styles.driverBubble : styles.otherBubble]}>
                 <Text style={item.sender === 'driver' ? styles.driverText : styles.otherText}>{item.text}</Text>
                 <Text style={[styles.timestamp, item.sender === 'driver' ? styles.driverTimestamp : styles.otherTimestamp]}>{item.timestamp}</Text>
@@ -71,7 +70,7 @@ const DriverChatModal: React.FC<DriverChatModalProps> = ({ order, onClose, visib
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>Chat con {order.customerName}</Text>
                         <TouchableOpacity onPress={onClose}>
-                            <X size={24} color="#718096" />
+                            <SimpleIcon type="close" size={24} />
                         </TouchableOpacity>
                     </View>
                     
@@ -99,7 +98,7 @@ const DriverChatModal: React.FC<DriverChatModalProps> = ({ order, onClose, visib
                        
                         <View style={styles.inputRow}>
                             <TouchableOpacity onPress={handleSuggestReplies} disabled={isLoadingSuggestions} style={styles.sparkleButton}>
-                                <Sparkles size={20} color="#00B894" />
+                                <SimpleIcon type="help-circle" size={20} />
                             </TouchableOpacity>
                             <TextInput
                                 style={styles.input}
@@ -113,7 +112,7 @@ const DriverChatModal: React.FC<DriverChatModalProps> = ({ order, onClose, visib
                                 disabled={input.trim() === ''}
                                 style={[styles.sendButton, input.trim() === '' && styles.sendButtonDisabled]}
                             >
-                                <Send size={20} color="white" />
+                                <SimpleIcon type="arrow-right" size={20} />
                             </TouchableOpacity>
                         </View>
                     </View>

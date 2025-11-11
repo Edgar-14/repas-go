@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import SimpleIcon from '../components/ui/SimpleIcon';
+import FloatingChatButton from '../components/ui/FloatingChatButton';
 
 // Screens
 import {
@@ -30,7 +31,7 @@ import {
   OrderRatingScreen,
   OnboardingScreen,
   RegistrationScreen,
-  WalletScreen
+  GPSNavigationScreen
 } from '../screens';
 
 const Stack = createStackNavigator();
@@ -103,6 +104,21 @@ const MainTabNavigator = () => {
       />
       
       <Tab.Screen
+        name="Navigation"
+        component={NavigationScreen}
+        options={{
+          tabBarLabel: 'Mapa',
+          tabBarIcon: ({ focused }) => (
+            <SimpleIcon 
+              type="navigation" 
+              size={24} 
+              color={focused ? '#00B894' : '#8E8E93'} 
+            />
+          ),
+        }}
+      />
+      
+      <Tab.Screen
         name="Payments"
         component={PaymentsScreen}
         options={{
@@ -170,7 +186,7 @@ const AppNavigator = () => {
             fontWeight: '700',
             fontSize: 18,
           },
-          headerBackTitleVisible: false,
+
         }}
         initialRouteName="Login"
       >
@@ -225,10 +241,17 @@ const AppNavigator = () => {
           name="Navigation"
           component={NavigationScreen as any}
           options={{ 
-            title: 'Navegación GPS',
-            gestureEnabled: false,
-            headerStyle: { backgroundColor: '#007AFF' },
-            headerTintColor: '#FFFFFF'
+            title: 'Mapa de Demanda',
+            headerStyle: { backgroundColor: '#FFFFFF' },
+            headerTintColor: '#2D3748'
+          }}
+        />
+        <Stack.Screen
+          name="GPSNavigation"
+          component={GPSNavigationScreen as any}
+          options={{ 
+            headerShown: false,
+            gestureEnabled: false
           }}
         />
         <Stack.Screen
@@ -242,12 +265,7 @@ const AppNavigator = () => {
           }}
         />
 
-        {/* Financial */}
-        <Stack.Screen
-          name="Wallet"
-          component={WalletScreen as any}
-          options={{ title: 'Mi Billetera' }}
-        />
+        {/* Financial - WalletScreen eliminada (duplicada) */}
         <Stack.Screen
           name="PaymentsHistory"
           component={PaymentsHistoryScreen as any}
@@ -297,6 +315,7 @@ const AppNavigator = () => {
           options={{ title: 'Reportar Incidente' }}
         />
       </Stack.Navigator>
+      <FloatingChatButton />
     </NavigationContainer>
   );
 };

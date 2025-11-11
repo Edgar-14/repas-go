@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Image } from 'react-native';
-import { MockOrder } from '../../types';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Order } from '../../types';
+import SimpleIcon from '../ui/SimpleIcon';
 
 interface NewOrderModalProps {
-    order: MockOrder | null;
-    onAccept: (order: MockOrder) => void;
-    onDecline: (order: MockOrder) => void;
+    order: Order | null;
+    onAccept: (order: Order) => void;
+    onDecline: (order: Order) => void;
 }
 
 const NewOrderModal: React.FC<NewOrderModalProps> = ({ order, onAccept, onDecline }) => {
@@ -59,14 +59,14 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ order, onAccept, onDeclin
                             <View>
                                 <Text style={styles.businessName}>{order.pickupBusiness}</Text>
                                 <View style={[styles.paymentChip, isCash ? styles.cashChip : styles.cardChip]}>
-                                   <CreditCard size={12} color={isCash ? '#166534' : '#1E40AF'} />
+                                   <SimpleIcon type="credit-card" size={12} />
                                    <Text style={[styles.paymentText, isCash ? styles.cashText : styles.cardText]}>
                                        {isCash ? 'Pago en Efectivo' : 'Pago con Tarjeta'}
                                    </Text>
                                 </View>
                             </View>
                             <View style={styles.earningsContainer}>
-                                <Text style={styles.earningsText}>${order.totalEarnings.toFixed(2)}</Text>
+                                <Text style={styles.earningsText}>${(order.totalEarnings || 0).toFixed(2)}</Text>
                                 <Text style={styles.distanceText}>2.5 km</Text>
                             </View>
                         </View>
@@ -75,13 +75,13 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ order, onAccept, onDeclin
                         </View>
                         <View style={styles.addressContainer}>
                             <View style={styles.addressRow}>
-                                <Building size={16} color="#1EE09A" />
+                                <SimpleIcon type="home" size={16} />
                                 <Text style={styles.addressText} numberOfLines={1}>
                                     <Text style={{fontWeight: 'bold'}}>Recogida:</Text> {order.pickupAddress}
                                 </Text>
                             </View>
                             <View style={styles.addressRow}>
-                                <Home size={16} color="#1EE09A" />
+                                <SimpleIcon type="home" size={16} />
                                 <Text style={styles.addressText} numberOfLines={1}>
                                     <Text style={{fontWeight: 'bold'}}>Entrega:</Text> {order.deliveryAddress}
                                 </Text>
@@ -91,11 +91,11 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ order, onAccept, onDeclin
 
                     <View style={styles.actionsContainer}>
                         <TouchableOpacity onPress={() => onDecline(order)} style={[styles.button, styles.declineButton]}>
-                            <X size={24} color="white" />
+                            <SimpleIcon type="close" size={24} />
                             <Text style={styles.buttonText}>Rechazar</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => onAccept(order)} style={[styles.button, styles.acceptButton]}>
-                            <Check size={24} color="white" />
+                            <SimpleIcon type="check" size={24} />
                             <Text style={styles.buttonText}>Aceptar</Text>
                         </TouchableOpacity>
                     </View>

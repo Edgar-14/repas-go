@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { OrderStatus } from '../../types';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface OrderStatusTimelineProps {
     currentStatus: OrderStatus;
@@ -9,10 +8,10 @@ interface OrderStatusTimelineProps {
 
 const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ currentStatus }) => {
     const statuses = [
-        { status: OrderStatus.ACCEPTED, label: 'Aceptado', icon: CheckCircle },
-        { status: OrderStatus.PICKED_UP, label: 'Recogido', icon: Package },
-        { status: OrderStatus.IN_TRANSIT, label: 'En Camino', icon: Truck },
-        { status: OrderStatus.ARRIVED, label: 'Llegada', icon: Flag },
+        { status: OrderStatus.ACCEPTED, label: 'Aceptado', icon: '✓' },
+        { status: OrderStatus.PICKED_UP, label: 'Recogido', icon: '📦' },
+        { status: OrderStatus.IN_TRANSIT, label: 'En Camino', icon: '🚚' },
+        { status: OrderStatus.ARRIVED, label: 'Llegada', icon: '🏁' },
     ];
 
     const currentStatusIndex = statuses.findIndex(s => s.status === currentStatus);
@@ -27,7 +26,9 @@ const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ currentStatus
                     <React.Fragment key={item.status}>
                         <View style={styles.statusItem}>
                             <View style={[styles.iconContainer, isActive && styles.iconContainerActive]}>
-                                <item.icon size={20} color={isActive ? 'white' : '#A0AEC0'} />
+                                <Text style={[styles.iconText, isActive && styles.iconTextActive]}>
+                                    {item.icon}
+                                </Text>
                             </View>
                             <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>
                         </View>
@@ -66,6 +67,12 @@ const styles = StyleSheet.create({
     iconContainerActive: {
         backgroundColor: '#00B894',
         borderColor: '#00B894',
+    },
+    iconText: {
+        fontSize: 20,
+    },
+    iconTextActive: {
+        fontSize: 20,
     },
     label: {
         fontSize: 12,

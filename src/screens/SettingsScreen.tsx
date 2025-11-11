@@ -1,194 +1,397 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-// NOTE: For document picking, a library like 'react-native-document-picker' would be needed.
-// import DocumentPicker, { DocumentPickerResponse } from 'react-native-document-picker';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  Switch,
+  Alert,
+} from 'react-native';
+import SimpleIcon from '../components/ui/SimpleIcon';
 
+interface NavigationProps {
+  navigation?: {
+    navigate: (screen: string) => void;
+    goBack: () => void;
+  };
+}
 
-const RegistrationScreen: React.FC = () => {
-    const navigation = useNavigation();
-    const [step, setStep] = useState(1);
-    const [formData, setFormData] = useState({
-        fullName: '', email: '', phone: '', password: '', vehicleType: 'motorcycle',
-        vehicleMake: '', vehicleModel: '', vehiclePlate: '', bankAccountHolder: '',
-        bankAccountCLABE: '', termsAccepted: false,
-        licenseDoc: null as any | null,
-        registrationDoc: null as any | null,
-        idDoc: null as any | null,
-    });
+const SettingsScreen: React.FC<NavigationProps> = ({ navigation }) => {
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+  const [locationSharing, setLocationSharing] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
 
-    const handleNext = () => setStep(prev => Math.min(prev + 1, 6));
-    const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-    
-    const handleInputChange = (name: string, value: string | boolean) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-    
-    const handleFilePick = async (name: string) => {
-        // Mock file picker
-        const mockFile = { name: `${name}.pdf`, size: 12345, type: 'application/pdf' };
-        setFormData(prev => ({ ...prev, [name]: mockFile }));
-    };
-    
-    const handleSubmit = () => {
-        console.log('Submitting application:', formData);
-        handleNext();
-    };
-
-    const FileUpload: React.FC<{ name: string; label: string; file: any | null;}> = ({ name, label, file }) => (
-        <View style={[styles.fileUploadContainer, file && styles.fileUploadComplete]}>
-            <View style={styles.fileInfo}>
-                {file ? <Icon name="check-circle" size={20} color="#00B894" /> : <Icon name="file-upload" size={20} color="#718096" />}
-                <View style={styles.fileTextContainer}>
-                    <Text style={styles.fileLabel}>{label}</Text>
-                    {file && <Text style={styles.fileName}>{file.name}</Text>}
-                </View>
-            </View>
-            <TouchableOpacity onPress={() => handleFilePick(name)} style={styles.uploadButton}>
-                <Text style={styles.uploadButtonText}>{file ? 'Cambiar' : 'Subir'}</Text>
-            </TouchableOpacity>
-        </View>
+  const handleSaveSettings = () => {
+    Alert.alert(
+      'Configuración guardada',
+      'Tus preferencias han sido actualizadas correctamente.',
+      [{ text: 'OK' }]
     );
-    
-    const renderStep = () => {
-        switch(step) {
-            case 1:
-                return (
-                     <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Información Personal</Text>
-                        <Text style={styles.stepSubtitle}>Comencemos con tus datos básicos.</Text>
-                         <View style={styles.inputContainer}><Icon name="account" size={20} color="#A0AEC0" style={styles.inputIcon} /><TextInput placeholder="Nombre Completo" value={formData.fullName} onChangeText={v => handleInputChange('fullName', v)} style={styles.input} /></View>
-                         <View style={styles.inputContainer}><Icon name="email" size={20} color="#A0AEC0" style={styles.inputIcon} /><TextInput placeholder="Email" value={formData.email} onChangeText={v => handleInputChange('email', v)} style={styles.input} keyboardType="email-address" /></View>
-                         <View style={styles.inputContainer}><Icon name="phone" size={20} color="#A0AEC0" style={styles.inputIcon} /><TextInput placeholder="Teléfono" value={formData.phone} onChangeText={v => handleInputChange('phone', v)} style={styles.input} keyboardType="phone-pad" /></View>
-                         <View style={styles.inputContainer}><Icon name="lock" size={20} color="#A0AEC0" style={styles.inputIcon} /><TextInput placeholder="Contraseña" value={formData.password} onChangeText={v => handleInputChange('password', v)} style={styles.input} secureTextEntry /></View>
-                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
-                    </View>
-                );
-            case 2:
-                 return (
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Detalles del Vehículo</Text>
-                        <Text style={styles.stepSubtitle}>¿Qué vehículo usarás?</Text>
-                        <View style={styles.vehicleOptions}>
-                            <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'motorcycle')} style={[styles.vehicleButton, formData.vehicleType === 'motorcycle' && styles.vehicleButtonActive]}><Icon name="motorbike" size={32} color={formData.vehicleType === 'motorcycle' ? '#00B894' : '#2D3748'} /><Text>Motocicleta</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'car')} style={[styles.vehicleButton, formData.vehicleType === 'car' && styles.vehicleButtonActive]}><Icon name="car" size={32} color={formData.vehicleType === 'car' ? '#00B894' : '#2D3748'} /><Text>Automóvil</Text></TouchableOpacity>
-                        </View>
-                        <TextInput placeholder="Marca" value={formData.vehicleMake} onChangeText={v => handleInputChange('vehicleMake', v)} style={styles.input} />
-                        <TextInput placeholder="Modelo" value={formData.vehicleModel} onChangeText={v => handleInputChange('vehicleModel', v)} style={styles.input} />
-                        <TextInput placeholder="Placa" value={formData.vehiclePlate} onChangeText={v => handleInputChange('vehiclePlate', v)} style={styles.input} />
-                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
-                    </View>
-                );
-            case 3:
-                return (
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Carga de Documentos</Text>
-                        <Text style={styles.stepSubtitle}>Necesitamos verificar tu identidad.</Text>
-                        <FileUpload name="licenseDoc" label="Licencia de Conducir" file={formData.licenseDoc} />
-                        <FileUpload name="registrationDoc" label="Tarjeta de Circulación" file={formData.registrationDoc} />
-                        <FileUpload name="idDoc" label="Identificación Oficial (INE)" file={formData.idDoc} />
-                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
-                    </View>
-                );
-            case 4:
-                return (
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Información de Pago</Text>
-                        <Text style={styles.stepSubtitle}>¿Dónde depositaremos tus ganancias?</Text>
-                        <View style={styles.inputContainer}><Icon name="account" size={20} color="#A0AEC0" style={styles.inputIcon} /><TextInput placeholder="Nombre del Titular" value={formData.bankAccountHolder} onChangeText={v => handleInputChange('bankAccountHolder', v)} style={styles.input} /></View>
-                        <View style={styles.inputContainer}><Icon name="bank" size={20} color="#A0AEC0" style={styles.inputIcon} /><TextInput placeholder="CLABE Interbancaria (18 dígitos)" value={formData.bankAccountCLABE} onChangeText={v => handleInputChange('bankAccountCLABE', v)} style={styles.input} keyboardType="number-pad" /></View>
-                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
-                    </View>
-                );
-            case 5:
-                return (
-                     <View style={styles.stepContainer}>
-                        <Text style={styles.stepTitle}>Revisión Final</Text>
-                        <Text style={styles.stepSubtitle}>Confirma que tu información es correcta.</Text>
-                        <ScrollView style={styles.reviewBox}>
-                            <Text><Text style={{fontWeight: 'bold'}}>Nombre:</Text> {formData.fullName}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Email:</Text> {formData.email}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Vehículo:</Text> {formData.vehicleMake} {formData.vehicleModel}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Placa:</Text> {formData.vehiclePlate}</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Documentos:</Text> {formData.licenseDoc ? '✅' : '❌'} Licencia, {formData.registrationDoc ? '✅' : '❌'} Tarjeta Circ., {formData.idDoc ? '✅' : '❌'} ID</Text>
-                            <Text><Text style={{fontWeight: 'bold'}}>Cuenta:</Text> ****{formData.bankAccountCLABE.slice(-4)}</Text>
-                        </ScrollView>
-                        <TouchableOpacity style={styles.termsRow} onPress={() => handleInputChange('termsAccepted', !formData.termsAccepted)}>
-                           <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <Icon name="check" color="white" size={12}/>}</View>
-                           <Text style={styles.termsText}>Acepto los <Text style={styles.linkText}>Términos y Condiciones</Text>.</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={handleSubmit} disabled={!formData.termsAccepted} style={[styles.nextButton, !formData.termsAccepted && styles.disabledButton]}><Text style={styles.nextButtonText}>Enviar Solicitud</Text></TouchableOpacity>
-                    </View>
-                );
-            case 6:
-                return (
-                    <View style={styles.stepContainer}>
-                         <Icon name="send" size={64} color="#00B894" style={{alignSelf: 'center'}}/>
-                         <Text style={styles.stepTitle}>Solicitud Enviada</Text>
-                        <Text style={styles.stepSubtitle}>Gracias por registrarte. Revisaremos tu información y te notificaremos por correo electrónico en un plazo de 2-3 días hábiles.</Text>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.nextButton}>
-                            <Text style={styles.nextButtonText}>Entendido</Text>
-                        </TouchableOpacity>
-                    </View>
-                );
-            default: return null;
+  };
+
+  const handleResetSettings = () => {
+    Alert.alert(
+      'Restablecer configuración',
+      '¿Estás seguro que deseas restablecer todas las configuraciones a sus valores por defecto?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Restablecer',
+          style: 'destructive',
+          onPress: () => {
+            setPushNotifications(true);
+            setSoundEnabled(true);
+            setVibrationEnabled(true);
+            setLocationSharing(true);
+            setDarkMode(false);
+            Alert.alert('Configuración restablecida', 'Se han restaurado los valores por defecto.');
+          }
         }
-    }
-
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : (step <= 5 ? handleBack() : navigation.goBack())} style={styles.backButton}>
-                    <Icon name="arrow-left" color="#2D3748" size={24} />
-                </TouchableOpacity>
-                {step <= 5 && (
-                  <View style={styles.progressBarContainer}>
-                      <View style={[styles.progressBar, { width: `${(step / 5) * 100}%` }]} />
-                  </View>
-                )}
-            </View>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-              {renderStep()}
-            </ScrollView>
-        </SafeAreaView>
+      ]
     );
+  };
+
+  const SettingItem: React.FC<{
+    icon: any;
+    title: string;
+    subtitle?: string;
+    value?: boolean;
+    onValueChange?: (value: boolean) => void;
+    onPress?: () => void;
+    showArrow?: boolean;
+  }> = ({ icon, title, subtitle, value, onValueChange, onPress, showArrow = false }) => (
+    <TouchableOpacity
+      style={styles.settingItem}
+      onPress={onPress}
+      disabled={!onPress && !onValueChange}
+    >
+      <View style={styles.settingLeft}>
+        <SimpleIcon type={icon} size={24} color="#00B894" />
+        <View style={styles.settingText}>
+          <Text style={styles.settingTitle}>{title}</Text>
+          {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+        </View>
+      </View>
+      <View style={styles.settingRight}>
+        {onValueChange && (
+          <Switch
+            value={value}
+            onValueChange={onValueChange}
+            trackColor={{ false: '#E2E8F0', true: '#00B894' }}
+            thumbColor={value ? '#FFFFFF' : '#CBD5E0'}
+          />
+        )}
+        {showArrow && (
+          <SimpleIcon type="arrow-right" size={20} color="#A0AEC0" />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation?.goBack()}
+        >
+          <SimpleIcon type="arrow-left" size={24} color="#2D3748" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Configuración</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView style={styles.content}>
+        {/* Notificaciones */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🔔 Notificaciones</Text>
+          
+          <SettingItem
+            icon="bell"
+            title="Notificaciones Push"
+            subtitle="Recibir alertas de nuevos pedidos"
+            value={pushNotifications}
+            onValueChange={setPushNotifications}
+          />
+          
+          <SettingItem
+            icon="bell"
+            title="Sonido"
+            subtitle="Reproducir sonido en notificaciones"
+            value={soundEnabled}
+            onValueChange={setSoundEnabled}
+          />
+          
+          <SettingItem
+            icon="bell"
+            title="Vibración"
+            subtitle="Vibrar al recibir notificaciones"
+            value={vibrationEnabled}
+            onValueChange={setVibrationEnabled}
+          />
+        </View>
+
+        {/* Privacidad y Ubicación */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🛡️ Privacidad y Ubicación</Text>
+          
+          <SettingItem
+            icon="navigation"
+            title="Compartir ubicación"
+            subtitle="Permitir que BeFast rastree tu ubicación"
+            value={locationSharing}
+            onValueChange={setLocationSharing}
+          />
+          
+          <SettingItem
+            icon="shield-check"
+            title="Política de privacidad"
+            subtitle="Ver términos y condiciones"
+            onPress={() => Alert.alert('Política de privacidad', 'Aquí se mostraría la política de privacidad completa.')}
+            showArrow
+          />
+        </View>
+
+        {/* Apariencia */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🎨 Apariencia</Text>
+          
+          <SettingItem
+            icon="cog"
+            title="Modo oscuro"
+            subtitle="Cambiar a tema oscuro"
+            value={darkMode}
+            onValueChange={setDarkMode}
+          />
+        </View>
+
+        {/* Cuenta */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👤 Cuenta</Text>
+          
+          <SettingItem
+            icon="account"
+            title="Editar perfil"
+            subtitle="Cambiar información personal"
+            onPress={() => Alert.alert('Editar perfil', 'Función en desarrollo')}
+            showArrow
+          />
+          
+          <SettingItem
+            icon="cog"
+            title="Cambiar contraseña"
+            subtitle="Actualizar tu contraseña"
+            onPress={() => Alert.alert('Cambiar contraseña', 'Función en desarrollo')}
+            showArrow
+          />
+          
+          <SettingItem
+            icon="file-text"
+            title="Documentos"
+            subtitle="Ver y actualizar documentos"
+            onPress={() => navigation?.navigate('Documents')}
+            showArrow
+          />
+        </View>
+
+        {/* Soporte */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🆘 Soporte</Text>
+          
+          <SettingItem
+            icon="help-circle"
+            title="Centro de ayuda"
+            subtitle="Preguntas frecuentes y tutoriales"
+            onPress={() => Alert.alert('Centro de ayuda', 'Función en desarrollo')}
+            showArrow
+          />
+          
+          <SettingItem
+            icon="message-circle"
+            title="Contactar soporte"
+            subtitle="Enviar mensaje al equipo de soporte"
+            onPress={() => navigation?.navigate('Chat')}
+            showArrow
+          />
+          
+          <SettingItem
+            icon="shield-alert"
+            title="Emergencia"
+            subtitle="Acceso rápido a funciones de emergencia"
+            onPress={() => navigation?.navigate('Emergency')}
+            showArrow
+          />
+        </View>
+
+        {/* Botones de acción */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSaveSettings}
+          >
+            <SimpleIcon type="check" size={20} color="#FFFFFF" />
+            <Text style={styles.saveButtonText}>Guardar Cambios</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={handleResetSettings}
+          >
+            <SimpleIcon type="close" size={20} color="#D63031" />
+            <Text style={styles.resetButtonText}>Restablecer</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Información de la app */}
+        <View style={styles.appInfo}>
+          <Text style={styles.appInfoTitle}>BeFast GO</Text>
+          <Text style={styles.appInfoVersion}>Versión 1.0.0</Text>
+          <Text style={styles.appInfoCopyright}>© 2024 BeFast. Todos los derechos reservados.</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: 'white' },
-    header: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-    backButton: { padding: 8 },
-    progressBarContainer: { flex: 1, height: 10, backgroundColor: '#EDF2F7', borderRadius: 5, marginLeft: 16 },
-    progressBar: { height: '100%', backgroundColor: '#00B894', borderRadius: 5 },
-    scrollContainer: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-    stepContainer: { width: '100%' },
-    stepTitle: { fontSize: 28, fontWeight: 'bold', color: '#2D3748', marginBottom: 8, textAlign: 'center' },
-    stepSubtitle: { fontSize: 16, color: '#718096', marginBottom: 24, textAlign: 'center' },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, marginBottom: 16 },
-    inputIcon: { position: 'absolute', left: 12 },
-    input: { flex: 1, height: 50, paddingLeft: 40, paddingRight: 16, fontSize: 16 },
-    nextButton: { backgroundColor: '#00B894', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16 },
-    nextButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-    disabledButton: { backgroundColor: '#A0AEC0' },
-    vehicleOptions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
-    vehicleButton: { flex: 1, padding: 16, borderWidth: 2, borderRadius: 8, alignItems: 'center', borderColor: '#E2E8F0', marginHorizontal: 8 },
-    vehicleButtonActive: { borderColor: '#00B894', backgroundColor: 'rgba(0, 184, 148, 0.1)' },
-    fileUploadContainer: { width: '100%', padding: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: '#CBD5E0', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    fileUploadComplete: { borderColor: '#00B894', borderStyle: 'solid' },
-    fileInfo: { flexDirection: 'row', alignItems: 'center' },
-    fileTextContainer: { marginLeft: 12 },
-    fileLabel: { fontWeight: '600', color: '#2D3748' },
-    fileName: { fontSize: 12, color: '#718096' },
-    uploadButton: { backgroundColor: '#EDF2F7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-    uploadButtonText: { color: '#4A5568', fontWeight: '600' },
-    reviewBox: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, maxHeight: 200, marginBottom: 16 },
-    termsRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
-    checkbox: { width: 20, height: 20, borderWidth: 2, borderColor: '#CBD5E0', borderRadius: 4, justifyContent: 'center', alignItems: 'center' },
-    checkboxChecked: { backgroundColor: '#00B894', borderColor: '#00B894' },
-    termsText: { flex: 1, marginLeft: 12, color: '#718096', fontSize: 14 },
-    linkText: { color: '#00B894', fontWeight: '600' },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D3748',
+  },
+  placeholder: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+  },
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 16,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8F9FA',
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D3748',
+  },
+  settingSubtitle: {
+    fontSize: 14,
+    color: '#718096',
+    marginTop: 2,
+  },
+  settingRight: {
+    alignItems: 'center',
+  },
+  actionButtons: {
+    margin: 16,
+    gap: 12,
+  },
+  saveButton: {
+    backgroundColor: '#00B894',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  resetButton: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#D63031',
+  },
+  resetButtonText: {
+    color: '#D63031',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  appInfo: {
+    alignItems: 'center',
+    padding: 24,
+    marginBottom: 32,
+  },
+  appInfoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    marginBottom: 4,
+  },
+  appInfoVersion: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 8,
+  },
+  appInfoCopyright: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    textAlign: 'center',
+  },
 });
 
-export default RegistrationScreen;
+export default SettingsScreen;

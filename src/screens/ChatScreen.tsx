@@ -10,9 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
-import { firestore, COLLECTIONS } from '../config/firebase';
+import { firestore } from '../config/firebase';
+import { useAuth } from '../hooks/useAuth';
 import { NavigationProps } from '../types';
 
 interface Message {
@@ -43,7 +42,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
-  const { user, driver } = useSelector((state: RootState) => state.auth);
+  const { driver } = useAuth();
 
   useEffect(() => {
     // Listener para mensajes en tiempo real
@@ -59,7 +58,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => {
     } else if (chatType === 'SUPPORT') {
       chatRef = firestore()
         .collection('chats')
-        .doc(`support_${user?.uid}`)
+        .doc(`support_${driver?.uid}`)
         .collection('messages')
         .orderBy('timestamp', 'desc')
         .limit(50);
@@ -78,7 +77,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => {
     });
 
     return () => unsubscribe?.();
-  }, [orderId, chatType, user]);
+  }, [orderId, chatType, driver]);
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -93,7 +92,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => {
         .collection('messages')
         .add({
           text: newMessage.trim(),
-          senderId: user?.uid,
+          senderId: driver?.uid,
           senderName: driver?.personalData?.fullName || 'Conductor',
           senderType: 'DRIVER',
           timestamp: firestore.FieldValue.serverTimestamp(),
@@ -114,7 +113,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => {
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    const isOwnMessage = item.senderId === user?.uid;
+    const isOwnMessage = item.senderId === driver?.uid;
 
     return (
       <View

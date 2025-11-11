@@ -29,10 +29,10 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
     };
 
     const menuItems = [
-        { icon: 'cog' as const, label: 'Configuración de la cuenta' },
-        { icon: 'bell' as const, label: 'Notificaciones' },
-        { icon: 'shield-check' as const, label: 'Seguridad y Privacidad' },
-        { icon: 'help-circle' as const, label: 'Centro de Ayuda' },
+        { icon: 'cog' as const, label: 'Configuración', screen: 'Settings' },
+        { icon: 'file-text' as const, label: 'Mis Documentos', screen: 'Documents' },
+        { icon: 'chart-bar' as const, label: 'Estadísticas', screen: 'Metrics' },
+        { icon: 'shield-alert' as const, label: '🚨 EMERGENCIA', screen: 'Emergency' },
     ];
 
     return (
@@ -53,10 +53,21 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
 
                 <View style={styles.menu}>
                     {menuItems.map((item, index) => (
-                        <TouchableOpacity key={index} style={[styles.menuItem, index === menuItems.length - 1 && styles.lastMenuItem]}>
+                        <TouchableOpacity 
+                            key={index} 
+                            style={[styles.menuItem, index === menuItems.length - 1 && styles.lastMenuItem]}
+                            onPress={() => navigation?.navigate(item.screen)}
+                        >
                            <View style={styles.menuItemContent}>
-                               <SimpleIcon type={item.icon} color="#718096" size={22} />
-                               <Text style={styles.menuItemLabel}>{item.label}</Text>
+                               <SimpleIcon 
+                                   type={item.icon} 
+                                   color={item.screen === 'Emergency' ? '#D63031' : '#718096'} 
+                                   size={22} 
+                               />
+                               <Text style={[
+                                   styles.menuItemLabel,
+                                   item.screen === 'Emergency' && styles.emergencyLabel
+                               ]}>{item.label}</Text>
                            </View>
                             <SimpleIcon type="arrow-right" color="#A0AEC0" size={20} />
                         </TouchableOpacity>
@@ -170,6 +181,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
         marginLeft: 8,
+    },
+    emergencyLabel: {
+        color: '#D63031',
+        fontWeight: 'bold',
     },
 });
 

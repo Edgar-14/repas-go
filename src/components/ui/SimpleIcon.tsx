@@ -1,51 +1,57 @@
 import React from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 
 interface SimpleIconProps {
-  type: 'home' | 'package' | 'wallet' | 'bell' | 'account' | 'arrow-left' | 'arrow-right' | 'check' | 'close' | 'plus' | 'minus' | 'bank' | 'clock' | 'play' | 'pause' | 'search' | 'cog' | 'shield-check' | 'help-circle' | 'logout';
+  type: 'home' | 'package' | 'wallet' | 'bell' | 'account' | 'arrow-left' | 'arrow-right' | 'check' | 'close' | 'plus' | 'minus' | 'bank' | 'clock' | 'play' | 'pause' | 'search' | 'cog' | 'shield-check' | 'help-circle' | 'logout' | 'file-text' | 'chart-bar' | 'history' | 'credit-card' | 'alert-triangle' | 'shield-alert' | 'message-circle' | 'navigation';
   size?: number;
   color?: string;
 }
 
 const SimpleIcon: React.FC<SimpleIconProps> = ({ type, size = 24, color = '#000' }) => {
-  const getIconSource = () => {
+  const getIconEmoji = () => {
     switch (type) {
-      case 'home': return require('../../../assets/icon/home.png');
-      case 'package': return require('../../../assets/icon/package.png');
-      case 'wallet': return require('../../../assets/icon/wallet.png');
-      case 'bell': return require('../../../assets/icon/bell.png');
-      case 'account': return require('../../../assets/icon/account.png');
-      case 'arrow-left': return require('../../../assets/icon/arrow-left.png');
-      case 'arrow-right': return require('../../../assets/icon/arrow-right.png');
-      case 'check': return require('../../../assets/icon/check.png');
-      case 'close': return require('../../../assets/icon/close.png');
-      case 'plus': return require('../../../assets/icon/plus.png');
-      case 'minus': return require('../../../assets/icon/minus.png');
-      case 'bank': return require('../../../assets/icon/bank.png');
-      case 'clock': return require('../../../assets/icon/clock.png');
-      case 'play': return require('../../../assets/icon/play.png');
-      case 'pause': return require('../../../assets/icon/pause.png');
-      case 'search': return require('../../../assets/icon/search.png');
-      case 'cog': return require('../../../assets/icon/cog.png');
-      case 'shield-check': return require('../../../assets/icon/shield-check.png');
-      case 'help-circle': return require('../../../assets/icon/help-circle.png');
-      case 'logout': return require('../../../assets/icon/logout.png');
-      default: return require('../../../assets/icon/home.png');
+      case 'home': return '🏠';
+      case 'package': return '📦';
+      case 'wallet': return '💰';
+      case 'bell': return '🔔';
+      case 'account': return '👤';
+      case 'arrow-left': return '←';
+      case 'arrow-right': return '→';
+      case 'check': return '✓';
+      case 'close': return '✕';
+      case 'plus': return '+';
+      case 'minus': return '-';
+      case 'bank': return '🏦';
+      case 'clock': return '🕐';
+      case 'play': return '▶';
+      case 'pause': return '⏸';
+      case 'search': return '🔍';
+      case 'cog': return '⚙️';
+      case 'shield-check': return '🛡️';
+      case 'help-circle': return '❓';
+      case 'logout': return '🚪';
+      case 'file-text': return '📄';
+      case 'chart-bar': return '📊';
+      case 'history': return '📜';
+      case 'credit-card': return '💳';
+      case 'alert-triangle': return '⚠️';
+      case 'shield-alert': return '🚨';
+      case 'message-circle': return '💬';
+      case 'navigation': return '🧭';
+      default: return '🏠';
     }
   };
 
   return (
-    <Image 
-      source={getIconSource()} 
-      style={[styles.icon, { width: size, height: size, tintColor: color }]} 
-      resizeMode="contain"
-    />
+    <Text style={[styles.icon, { fontSize: size, color }]}>
+      {getIconEmoji()}
+    </Text>
   );
 };
 
 const styles = StyleSheet.create({
   icon: {
-    // tintColor will be applied via style prop
+    textAlign: 'center',
   },
 });
 

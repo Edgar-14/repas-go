@@ -75,6 +75,35 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
           </View>
         )}
 
+        {/* Performance Widgets */}
+        <View style={styles.widgetsContainer}>
+          <View style={[styles.card, styles.widget]}>
+            <Text style={styles.widgetTitle}>Calificación</Text>
+            <Text style={styles.widgetValue}>4.8 ⭐</Text>
+            <Text style={styles.widgetSubtext}>Excelente</Text>
+          </View>
+          
+          <View style={[styles.card, styles.widget]}>
+            <Text style={styles.widgetTitle}>Eficiencia</Text>
+            <Text style={styles.widgetValue}>92%</Text>
+            <Text style={styles.widgetSubtext}>Muy buena</Text>
+          </View>
+        </View>
+
+        <View style={styles.widgetsContainer}>
+          <View style={[styles.card, styles.widget]}>
+            <Text style={styles.widgetTitle}>Pedidos Semana</Text>
+            <Text style={styles.widgetValue}>28</Text>
+            <Text style={styles.widgetSubtext}>+12% vs anterior</Text>
+          </View>
+          
+          <View style={[styles.card, styles.widget]}>
+            <Text style={styles.widgetTitle}>Tiempo Promedio</Text>
+            <Text style={styles.widgetValue}>18 min</Text>
+            <Text style={styles.widgetSubtext}>Por entrega</Text>
+          </View>
+        </View>
+
         {isOnline && (
           <View style={[styles.card, styles.centeredCard]}>
             <SimpleIcon type="search" size={48} color="#00B894" />
@@ -200,6 +229,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     textAlign: 'center',
+  },
+  widgetsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  widget: {
+    flex: 0.48,
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  widgetTitle: {
+    fontSize: 14,
+    color: '#718096',
+    marginBottom: 8,
+  },
+  widgetValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    marginBottom: 4,
+  },
+  widgetSubtext: {
+    fontSize: 12,
+    color: '#00B894',
   },
 });
 
