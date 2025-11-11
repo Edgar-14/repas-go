@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import SimpleIcon from '../components/ui/SimpleIcon';
 
 interface NavigationProps {
   navigation?: {
@@ -29,10 +29,10 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
     };
 
     const menuItems = [
-        { icon: 'cog', label: 'Configuración de la cuenta' },
-        { icon: 'bell', label: 'Notificaciones' },
-        { icon: 'shield-check', label: 'Seguridad y Privacidad' },
-        { icon: 'help-circle', label: 'Centro de Ayuda' },
+        { icon: 'cog' as const, label: 'Configuración de la cuenta' },
+        { icon: 'bell' as const, label: 'Notificaciones' },
+        { icon: 'shield-check' as const, label: 'Seguridad y Privacidad' },
+        { icon: 'help-circle' as const, label: 'Centro de Ayuda' },
     ];
 
     return (
@@ -55,16 +55,16 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
                     {menuItems.map((item, index) => (
                         <TouchableOpacity key={index} style={[styles.menuItem, index === menuItems.length - 1 && styles.lastMenuItem]}>
                            <View style={styles.menuItemContent}>
-                               <Icon name={item.icon} color="#718096" size={22} />
+                               <SimpleIcon type={item.icon} color="#718096" size={22} />
                                <Text style={styles.menuItemLabel}>{item.label}</Text>
                            </View>
-                            <Icon name="chevron-right" color="#A0AEC0" size={20} />
+                            <SimpleIcon type="arrow-right" color="#A0AEC0" size={20} />
                         </TouchableOpacity>
                     ))}
                 </View>
                 
                 <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                    <Icon name="logout" size={20} color="white" />
+                    <SimpleIcon type="logout" size={20} color="white" />
                     <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
                 </TouchableOpacity>
             </ScrollView>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, FlatList } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import SimpleIcon from '../components/ui/SimpleIcon';
 
 interface NavigationProps {
   navigation?: {
@@ -26,11 +26,11 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
         navigation?.navigate('Withdraw');
     };
 
-    const getTransactionIcon = (type: string) => {
+    const getTransactionIcon = (type: string): 'plus' | 'minus' | 'wallet' => {
         switch (type) {
-            case 'EARNING': return 'plus-circle';
-            case 'WITHDRAWAL': return 'minus-circle';
-            default: return 'circle';
+            case 'EARNING': return 'plus';
+            case 'WITHDRAWAL': return 'minus';
+            default: return 'wallet';
         }
     };
 
@@ -45,8 +45,8 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
     const renderTransaction = ({ item }: { item: any }) => (
         <View style={styles.transactionItem}>
             <View style={styles.transactionLeft}>
-                <Icon 
-                    name={getTransactionIcon(item.type)} 
+                <SimpleIcon 
+                    type={getTransactionIcon(item.type)} 
                     size={24} 
                     color={getTransactionColor(item.type)} 
                 />
@@ -73,7 +73,7 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
                     <Text style={styles.balanceLabel}>Saldo Disponible</Text>
                     <Text style={styles.balanceAmount}>${wallet.balance.toFixed(2)}</Text>
                     <TouchableOpacity style={styles.withdrawButton} onPress={handleWithdraw}>
-                        <Icon name="bank-transfer" size={20} color="white" />
+                        <SimpleIcon type="bank" size={20} color="white" />
                         <Text style={styles.withdrawButtonText}>Retirar</Text>
                     </TouchableOpacity>
                 </View>
@@ -229,6 +229,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
+
 });
 
 export default PaymentsScreen;

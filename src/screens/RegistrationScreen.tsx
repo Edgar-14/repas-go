@@ -1,744 +1,195 @@
-// Pantalla de Registro para BeFast GO - 5 Pasos
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { NavigationProps } from '../types';
-import { firestore, storage, COLLECTIONS } from '../config/firebase';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-interface RegistrationData {
-  // Paso 1: Datos Personales y Laborales
-  fullName: string;
-  phone: string;
-  rfc: string;
-  curp: string;
-  nss: string;
-  vehicleType: string;
-  vehicleBrand: string;
-  vehicleModel: string;
-  vehiclePlates: string;
-  clabe: string;
-  
-  // Paso 2: Documentos (URIs de archivos)
-  ineDocument: string;
-  satDocument: string;
-  licenseDocument: string;
-  vehicleCardDocument: string;
-  
-  // Paso 3: Aceptación de políticas
-  acceptedPolicies: boolean;
-  acceptedContract: boolean;
-  signature: string;
-  
-  // Paso 4: Capacitación
-  trainingCompleted: boolean;
-  quizScore: number;
-  equipmentEvidence: string;
-}
+// NOTE: For document picking, a library like 'react-native-document-picker' would be needed.
+// import DocumentPicker, { DocumentPickerResponse } from 'react-native-document-picker';
 
-const RegistrationScreen: React.FC<NavigationProps> = ({ navigation }) => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<RegistrationData>({
-    fullName: '',
-    phone: '',
-    rfc: '',
-    curp: '',
-    nss: '',
-    vehicleType: '',
-    vehicleBrand: '',
-    vehicleModel: '',
-    vehiclePlates: '',
-    clabe: '',
-    ineDocument: '',
-    satDocument: '',
-    licenseDocument: '',
-    vehicleCardDocument: '',
-    acceptedPolicies: false,
-    acceptedContract: false,
-    signature: '',
-    trainingCompleted: false,
-    quizScore: 0,
-    equipmentEvidence: '',
-  });
 
-  const updateFormData = (field: keyof RegistrationData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+const RegistrationScreen: React.FC = () => {
+    const navigation = useNavigation();
+    const [step, setStep] = useState(1);
+    const [formData, setFormData] = useState({
+        fullName: '', email: '', phone: '', password: '', vehicleType: 'motorcycle',
+        vehicleMake: '', vehicleModel: '', vehiclePlate: '', bankAccountHolder: '',
+        bankAccountCLABE: '', termsAccepted: false,
+        licenseDoc: null as any | null,
+        registrationDoc: null as any | null,
+        idDoc: null as any | null,
+    });
 
-  const validateStep1 = () => {
-    if (!formData.fullName || !formData.phone || !formData.rfc || 
-        !formData.curp || !formData.nss || !formData.vehicleType ||
-        !formData.vehicleBrand || !formData.vehicleModel || 
-        !formData.vehiclePlates || !formData.clabe) {
-      Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
-      return false;
-    }
+    const handleNext = () => setStep(prev => Math.min(prev + 1, 6));
+    const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
     
-    // Validar RFC (13 caracteres)
-    if (formData.rfc.length !== 13) {
-      Alert.alert('Error', 'El RFC debe tener 13 caracteres');
-      return false;
-    }
+    const handleInputChange = (name: string, value: string | boolean) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
     
-    // Validar CURP (18 caracteres)
-    if (formData.curp.length !== 18) {
-      Alert.alert('Error', 'El CURP debe tener 18 caracteres');
-      return false;
-    }
+    const handleFilePick = async (name: string) => {
+        // Mock file picker
+        const mockFile = { name: `${name}.pdf`, size: 12345, type: 'application/pdf' };
+        setFormData(prev => ({ ...prev, [name]: mockFile }));
+    };
     
-    // Validar NSS (11 dígitos)
-    if (formData.nss.length !== 11 || !/^\d+$/.test(formData.nss)) {
-      Alert.alert('Error', 'El NSS debe tener 11 dígitos');
-      return false;
-    }
+    const handleSubmit = () => {
+        console.log('Submitting application:', formData);
+        handleNext();
+    };
+
+    const FileUpload: React.FC<{ name: string; label: string; file: any | null;}> = ({ name, label, file }) => (
+        <View style={[styles.fileUploadContainer, file && styles.fileUploadComplete]}>
+            <View style={styles.fileInfo}>
+                {file ? <TickCircle size={20} color="#00B894" /> : <DocumentUpload size={20} color="#718096" />}
+                <View style={styles.fileTextContainer}>
+                    <Text style={styles.fileLabel}>{label}</Text>
+                    {file && <Text style={styles.fileName}>{file.name}</Text>}
+                </View>
+            </View>
+            <TouchableOpacity onPress={() => handleFilePick(name)} style={styles.uploadButton}>
+                <Text style={styles.uploadButtonText}>{file ? 'Cambiar' : 'Subir'}</Text>
+            </TouchableOpacity>
+        </View>
+    );
     
-    // Validar CLABE (18 dígitos)
-    if (formData.clabe.length !== 18 || !/^\d+$/.test(formData.clabe)) {
-      Alert.alert('Error', 'La CLABE debe tener 18 dígitos');
-      return false;
+    const renderStep = () => {
+        switch(step) {
+            case 1:
+                return (
+                     <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Información Personal</Text>
+                        <Text style={styles.stepSubtitle}>Comencemos con tus datos básicos.</Text>
+                         <View style={styles.inputContainer}><Profile style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Nombre Completo" value={formData.fullName} onChangeText={v => handleInputChange('fullName', v)} style={styles.input} /></View>
+                         <View style={styles.inputContainer}><Sms style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Email" value={formData.email} onChangeText={v => handleInputChange('email', v)} style={styles.input} keyboardType="email-address" /></View>
+                         <View style={styles.inputContainer}><Call style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Teléfono" value={formData.phone} onChangeText={v => handleInputChange('phone', v)} style={styles.input} keyboardType="phone-pad" /></View>
+                         <View style={styles.inputContainer}><Lock style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Contraseña" value={formData.password} onChangeText={v => handleInputChange('password', v)} style={styles.input} secureTextEntry /></View>
+                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
+                    </View>
+                );
+            case 2:
+                 return (
+                    <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Detalles del Vehículo</Text>
+                        <Text style={styles.stepSubtitle}>¿Qué vehículo usarás?</Text>
+                        <View style={styles.vehicleOptions}>
+                            <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'motorcycle')} style={[styles.vehicleButton, formData.vehicleType === 'motorcycle' && styles.vehicleButtonActive]}><CarIcon size={32} color={formData.vehicleType === 'motorcycle' ? '#00B894' : '#718096'} /><Text>Motocicleta</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'car')} style={[styles.vehicleButton, formData.vehicleType === 'car' && styles.vehicleButtonActive]}><CarIcon size={32} color={formData.vehicleType === 'car' ? '#00B894' : '#718096'} /><Text>Automóvil</Text></TouchableOpacity>
+                        </View>
+                        <TextInput placeholder="Marca" value={formData.vehicleMake} onChangeText={v => handleInputChange('vehicleMake', v)} style={styles.input} />
+                        <TextInput placeholder="Modelo" value={formData.vehicleModel} onChangeText={v => handleInputChange('vehicleModel', v)} style={styles.input} />
+                        <TextInput placeholder="Placa" value={formData.vehiclePlate} onChangeText={v => handleInputChange('vehiclePlate', v)} style={styles.input} />
+                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
+                    </View>
+                );
+            case 3:
+                return (
+                    <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Carga de Documentos</Text>
+                        <Text style={styles.stepSubtitle}>Necesitamos verificar tu identidad.</Text>
+                        <FileUpload name="licenseDoc" label="Licencia de Conducir" file={formData.licenseDoc} />
+                        <FileUpload name="registrationDoc" label="Tarjeta de Circulación" file={formData.registrationDoc} />
+                        <FileUpload name="idDoc" label="Identificación Oficial (INE)" file={formData.idDoc} />
+                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
+                    </View>
+                );
+            case 4:
+                return (
+                    <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Información de Pago</Text>
+                        <Text style={styles.stepSubtitle}>¿Dónde depositaremos tus ganancias?</Text>
+                        <View style={styles.inputContainer}><Profile style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="Nombre del Titular" value={formData.bankAccountHolder} onChangeText={v => handleInputChange('bankAccountHolder', v)} style={styles.input} /></View>
+                        <View style={styles.inputContainer}><MoneyRecive style={styles.inputIcon} size={20} color="#718096" /><TextInput placeholder="CLABE Interbancaria (18 dígitos)" value={formData.bankAccountCLABE} onChangeText={v => handleInputChange('bankAccountCLABE', v)} style={styles.input} keyboardType="number-pad" /></View>
+                        <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
+                    </View>
+                );
+            case 5:
+                return (
+                     <View style={styles.stepContainer}>
+                        <Text style={styles.stepTitle}>Revisión Final</Text>
+                        <Text style={styles.stepSubtitle}>Confirma que tu información es correcta.</Text>
+                        <ScrollView style={styles.reviewBox}>
+                            <Text><Text style={{fontWeight: 'bold'}}>Nombre:</Text> {formData.fullName}</Text>
+                            <Text><Text style={{fontWeight: 'bold'}}>Email:</Text> {formData.email}</Text>
+                            <Text><Text style={{fontWeight: 'bold'}}>Vehículo:</Text> {formData.vehicleMake} {formData.vehicleModel}</Text>
+                            <Text><Text style={{fontWeight: 'bold'}}>Placa:</Text> {formData.vehiclePlate}</Text>
+                            <Text><Text style={{fontWeight: 'bold'}}>Documentos:</Text> {formData.licenseDoc ? '✅' : '❌'} Licencia, {formData.registrationDoc ? '✅' : '❌'} Tarjeta Circ., {formData.idDoc ? '✅' : '❌'} ID</Text>
+                            <Text><Text style={{fontWeight: 'bold'}}>Cuenta:</Text> ****{formData.bankAccountCLABE.slice(-4)}</Text>
+                        </ScrollView>
+                        <TouchableOpacity style={styles.termsRow} onPress={() => handleInputChange('termsAccepted', !formData.termsAccepted)}>
+                           <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <TickSquare size={12} color="#FFFFFF" />}</View>
+                           <Text style={styles.termsText}>Acepto los <Text style={styles.linkText}>Términos y Condiciones</Text>.</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={handleSubmit} disabled={!formData.termsAccepted} style={[styles.nextButton, !formData.termsAccepted && styles.disabledButton]}><Text style={styles.nextButtonText}>Enviar Solicitud</Text></TouchableOpacity>
+                    </View>
+                );
+            case 6:
+                return (
+                    <View style={styles.stepContainer}>
+                         <Send2 size={64} color="#00B894" style={{alignSelf: 'center'}} />
+                         <Text style={styles.stepTitle}>Solicitud Enviada</Text>
+                        <Text style={styles.stepSubtitle}>Gracias por registrarte. Revisaremos tu información y te notificaremos por correo electrónico en un plazo de 2-3 días hábiles.</Text>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.nextButton}>
+                            <Text style={styles.nextButtonText}>Entendido</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            default: return null;
+        }
     }
-    
-    return true;
-  };
 
-  const validateStep2 = () => {
-    if (!formData.ineDocument || !formData.satDocument || 
-        !formData.licenseDocument || !formData.vehicleCardDocument) {
-      Alert.alert('Error', 'Por favor sube todos los documentos requeridos');
-      return false;
-    }
-    return true;
-  };
 
-  const validateStep3 = () => {
-    if (!formData.acceptedPolicies || !formData.acceptedContract || !formData.signature) {
-      Alert.alert('Error', 'Debes aceptar las políticas y firmar el contrato');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep4 = () => {
-    if (!formData.trainingCompleted || formData.quizScore < 80 || !formData.equipmentEvidence) {
-      Alert.alert('Error', 'Debes completar la capacitación, aprobar el cuestionario con al menos 80% y subir evidencia');
-      return false;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    let isValid = false;
-    
-    switch (currentStep) {
-      case 1:
-        isValid = validateStep1();
-        break;
-      case 2:
-        isValid = validateStep2();
-        break;
-      case 3:
-        isValid = validateStep3();
-        break;
-      case 4:
-        isValid = validateStep4();
-        break;
-      case 5:
-        handleSubmit();
-        return;
-    }
-    
-    if (isValid && currentStep < 5) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Crear solicitud de conductor en Firestore
-      const applicationRef = await firestore()
-        .collection(COLLECTIONS.DRIVER_APPLICATIONS)
-        .add({
-          personalData: {
-            fullName: formData.fullName,
-            phone: formData.phone,
-            rfc: formData.rfc,
-            curp: formData.curp,
-            nss: formData.nss,
-          },
-          vehicle: {
-            type: formData.vehicleType,
-            brand: formData.vehicleBrand,
-            model: formData.vehicleModel,
-            plates: formData.vehiclePlates,
-          },
-          banking: {
-            clabe: formData.clabe,
-          },
-          documents: {
-            ine: formData.ineDocument,
-            sat: formData.satDocument,
-            license: formData.licenseDocument,
-            vehicleCard: formData.vehicleCardDocument,
-          },
-          legal: {
-            acceptedPolicies: formData.acceptedPolicies,
-            acceptedContract: formData.acceptedContract,
-            signature: formData.signature,
-            signedAt: firestore.FieldValue.serverTimestamp(),
-          },
-          training: {
-            completed: formData.trainingCompleted,
-            quizScore: formData.quizScore,
-            equipmentEvidence: formData.equipmentEvidence,
-          },
-          status: 'PENDING',
-          createdAt: firestore.FieldValue.serverTimestamp(),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
-      
-      Alert.alert(
-        '¡Solicitud Enviada!',
-        'Tu solicitud ha sido enviada exitosamente. Recibirás un email cuando sea revisada.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.replace('Login'),
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Error al enviar solicitud:', error);
-      Alert.alert('Error', 'No se pudo enviar la solicitud. Intenta de nuevo.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const renderStep1 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Paso 1: Datos Personales y Laborales</Text>
-      
-      <Text style={styles.sectionTitle}>Información Personal</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Nombre Completo *"
-        value={formData.fullName}
-        onChangeText={(text) => updateFormData('fullName', text)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Teléfono (10 dígitos) *"
-        value={formData.phone}
-        onChangeText={(text) => updateFormData('phone', text)}
-        keyboardType="phone-pad"
-        maxLength={10}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="RFC (13 caracteres) *"
-        value={formData.rfc}
-        onChangeText={(text) => updateFormData('rfc', text.toUpperCase())}
-        maxLength={13}
-        autoCapitalize="characters"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="CURP (18 caracteres) *"
-        value={formData.curp}
-        onChangeText={(text) => updateFormData('curp', text.toUpperCase())}
-        maxLength={18}
-        autoCapitalize="characters"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="NSS (11 dígitos) *"
-        value={formData.nss}
-        onChangeText={(text) => updateFormData('nss', text)}
-        keyboardType="numeric"
-        maxLength={11}
-      />
-      
-      <Text style={styles.sectionTitle}>Información del Vehículo</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Tipo de Vehículo (Moto, Auto) *"
-        value={formData.vehicleType}
-        onChangeText={(text) => updateFormData('vehicleType', text)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Marca *"
-        value={formData.vehicleBrand}
-        onChangeText={(text) => updateFormData('vehicleBrand', text)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Modelo *"
-        value={formData.vehicleModel}
-        onChangeText={(text) => updateFormData('vehicleModel', text)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Placas *"
-        value={formData.vehiclePlates}
-        onChangeText={(text) => updateFormData('vehiclePlates', text.toUpperCase())}
-        autoCapitalize="characters"
-      />
-      
-      <Text style={styles.sectionTitle}>Información Bancaria</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="CLABE (18 dígitos) *"
-        value={formData.clabe}
-        onChangeText={(text) => updateFormData('clabe', text)}
-        keyboardType="numeric"
-        maxLength={18}
-      />
-    </View>
-  );
-
-  const renderStep2 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Paso 2: Documentación Legal</Text>
-      <Text style={styles.infoText}>
-        Sube los siguientes documentos en formato JPG, PNG o PDF (máximo 5MB cada uno)
-      </Text>
-      
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={() => {
-          // Aquí iría la lógica de subida de archivos
-          Alert.alert('Subir Documento', 'Funcionalidad de subida de INE');
-          updateFormData('ineDocument', 'ine_documento.pdf');
-        }}
-      >
-        <Text style={styles.uploadButtonText}>
-          {formData.ineDocument ? '✅ INE Subida' : '📄 Subir INE'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={() => {
-          Alert.alert('Subir Documento', 'Funcionalidad de subida de Constancia SAT');
-          updateFormData('satDocument', 'sat_documento.pdf');
-        }}
-      >
-        <Text style={styles.uploadButtonText}>
-          {formData.satDocument ? '✅ Constancia SAT Subida' : '📄 Subir Constancia SAT'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={() => {
-          Alert.alert('Subir Documento', 'Funcionalidad de subida de Licencia');
-          updateFormData('licenseDocument', 'licencia_documento.pdf');
-        }}
-      >
-        <Text style={styles.uploadButtonText}>
-          {formData.licenseDocument ? '✅ Licencia Subida' : '📄 Subir Licencia de Conducir'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={() => {
-          Alert.alert('Subir Documento', 'Funcionalidad de subida de Tarjeta de Circulación');
-          updateFormData('vehicleCardDocument', 'tarjeta_circulacion.pdf');
-        }}
-      >
-        <Text style={styles.uploadButtonText}>
-          {formData.vehicleCardDocument ? '✅ Tarjeta de Circulación Subida' : '📄 Subir Tarjeta de Circulación'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderStep3 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Paso 3: Acuerdos Legales y Firma</Text>
-      
-      <View style={styles.checkboxContainer}>
-        <TouchableOpacity
-          style={[styles.checkbox, formData.acceptedPolicies && styles.checkboxChecked]}
-          onPress={() => updateFormData('acceptedPolicies', !formData.acceptedPolicies)}
-        >
-          {formData.acceptedPolicies && <Text style={styles.checkboxText}>✓</Text>}
-        </TouchableOpacity>
-        <Text style={styles.checkboxLabel}>
-          Acepto la Política de Gestión Algorítmica
-        </Text>
-      </View>
-      
-      <View style={styles.checkboxContainer}>
-        <TouchableOpacity
-          style={[styles.checkbox, formData.acceptedContract && styles.checkboxChecked]}
-          onPress={() => updateFormData('acceptedContract', !formData.acceptedContract)}
-        >
-          {formData.acceptedContract && <Text style={styles.checkboxText}>✓</Text>}
-        </TouchableOpacity>
-        <Text style={styles.checkboxLabel}>
-          Acepto el Contrato de Trabajo como empleado formal
-        </Text>
-      </View>
-      
-      <Text style={styles.sectionTitle}>Firma Digital</Text>
-      <TouchableOpacity
-        style={styles.signatureButton}
-        onPress={() => {
-          Alert.alert('Firma Digital', 'Funcionalidad de firma digital');
-          updateFormData('signature', 'firma_digital_base64');
-        }}
-      >
-        <Text style={styles.signatureButtonText}>
-          {formData.signature ? '✅ Firmado' : '✍️ Firmar Digitalmente'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderStep4 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Paso 4: Capacitación Obligatoria</Text>
-      
-      <TouchableOpacity
-        style={styles.trainingButton}
-        onPress={() => {
-          Alert.alert('Capacitación', 'Ver videos de capacitación');
-          updateFormData('trainingCompleted', true);
-        }}
-      >
-        <Text style={styles.trainingButtonText}>
-          {formData.trainingCompleted ? '✅ Videos Vistos' : '📹 Ver Videos de Capacitación'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.trainingButton}
-        onPress={() => {
-          Alert.alert('Cuestionario', 'Responder cuestionario');
-          updateFormData('quizScore', 85);
-        }}
-      >
-        <Text style={styles.trainingButtonText}>
-          {formData.quizScore > 0 
-            ? `✅ Cuestionario Aprobado (${formData.quizScore}%)` 
-            : '📝 Responder Cuestionario'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={styles.uploadButton}
-        onPress={() => {
-          Alert.alert('Evidencia', 'Subir foto de equipo de trabajo');
-          updateFormData('equipmentEvidence', 'equipo_foto.jpg');
-        }}
-      >
-        <Text style={styles.uploadButtonText}>
-          {formData.equipmentEvidence ? '✅ Evidencia Subida' : '📷 Subir Foto de Equipo'}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  const renderStep5 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Paso 5: Confirmación y Envío</Text>
-      
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryTitle}>Resumen de tu Solicitud</Text>
-        <Text style={styles.summaryText}>Nombre: {formData.fullName}</Text>
-        <Text style={styles.summaryText}>Teléfono: {formData.phone}</Text>
-        <Text style={styles.summaryText}>RFC: {formData.rfc}</Text>
-        <Text style={styles.summaryText}>Vehículo: {formData.vehicleType} {formData.vehicleBrand} {formData.vehicleModel}</Text>
-        <Text style={styles.summaryText}>Placas: {formData.vehiclePlates}</Text>
-      </View>
-      
-      <View style={styles.infoBox}>
-        <Text style={styles.infoBoxText}>
-          ✅ Tu solicitud será revisada por nuestro equipo.
-        </Text>
-        <Text style={styles.infoBoxText}>
-          📧 Recibirás un email con el resultado de la evaluación.
-        </Text>
-        <Text style={styles.infoBoxText}>
-          ⏱️ El proceso toma de 2 a 5 días hábiles.
-        </Text>
-      </View>
-    </View>
-  );
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Registro de Conductor</Text>
-        <Text style={styles.headerSubtitle}>Paso {currentStep} de 5</Text>
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressBar}>
-        {[1, 2, 3, 4, 5].map((step) => (
-          <View
-            key={step}
-            style={[
-              styles.progressStep,
-              currentStep >= step && styles.progressStepActive,
-            ]}
-          />
-        ))}
-      </View>
-
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
-        {currentStep === 4 && renderStep4()}
-        {currentStep === 5 && renderStep5()}
-      </ScrollView>
-
-      {/* Navigation Buttons */}
-      <View style={styles.footer}>
-        {currentStep > 1 && (
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Anterior</Text>
-          </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity
-          style={[styles.nextButton, currentStep === 1 && styles.nextButtonFull]}
-          onPress={handleNext}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.nextButtonText}>
-              {currentStep === 5 ? 'Enviar Solicitud' : 'Siguiente'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    return (
+        <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : (step <= 5 ? handleBack() : navigation.goBack())} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#2D3748" />
+                </TouchableOpacity>
+                {step <= 5 && (
+                  <View style={styles.progressBarContainer}>
+                      <View style={[styles.progressBar, { width: `${(step / 5) * 100}%` }]} />
+                  </View>
+                )}
+            </View>
+            <ScrollView contentContainerStyle={styles.scrollContainer}>
+              {renderStep()}
+            </ScrollView>
+        </SafeAreaView>
+    );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  header: {
-    backgroundColor: '#FF6B35',
-    padding: 20,
-    paddingTop: 50,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginTop: 4,
-  },
-  progressBar: {
-    flexDirection: 'row',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  progressStep: {
-    flex: 1,
-    height: 4,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 2,
-    borderRadius: 2,
-  },
-  progressStepActive: {
-    backgroundColor: '#FF6B35',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  stepTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  uploadButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  uploadButtonText: {
-    color: '#FF6B35',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: '#DDD',
-    borderRadius: 4,
-    marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
-  },
-  checkboxText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-  },
-  signatureButton: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  signatureButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  trainingButton: {
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  trainingButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  summaryText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  infoBox: {
-    backgroundColor: '#E8F5E9',
-    borderRadius: 12,
-    padding: 20,
-  },
-  infoBoxText: {
-    fontSize: 14,
-    color: '#2E7D32',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  backButton: {
-    flex: 1,
-    marginRight: 10,
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    color: '#FF6B35',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  nextButton: {
-    flex: 1,
-    marginLeft: 10,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#FF6B35',
-    alignItems: 'center',
-  },
-  nextButtonFull: {
-    marginLeft: 0,
-  },
-  nextButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    container: { flex: 1, backgroundColor: 'white' },
+    header: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+    backButton: { padding: 8 },
+    progressBarContainer: { flex: 1, height: 10, backgroundColor: '#EDF2F7', borderRadius: 5, marginLeft: 16 },
+    progressBar: { height: '100%', backgroundColor: '#00B894', borderRadius: 5 },
+    scrollContainer: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+    stepContainer: { width: '100%' },
+    stepTitle: { fontSize: 28, fontWeight: 'bold', color: '#2D3748', marginBottom: 8, textAlign: 'center' },
+    stepSubtitle: { fontSize: 16, color: '#718096', marginBottom: 24, textAlign: 'center' },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, marginBottom: 16 },
+    inputIcon: { position: 'absolute', left: 12 },
+    input: { flex: 1, height: 50, paddingLeft: 40, paddingRight: 16, fontSize: 16 },
+    nextButton: { backgroundColor: '#00B894', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16 },
+    nextButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+    disabledButton: { backgroundColor: '#A0AEC0' },
+    vehicleOptions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+    vehicleButton: { flex: 1, padding: 16, borderWidth: 2, borderRadius: 8, alignItems: 'center', borderColor: '#E2E8F0', marginHorizontal: 8 },
+    vehicleButtonActive: { borderColor: '#00B894', backgroundColor: 'rgba(0, 184, 148, 0.1)' },
+    fileUploadContainer: { width: '100%', padding: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: '#CBD5E0', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+    fileUploadComplete: { borderColor: '#00B894', borderStyle: 'solid' },
+    fileInfo: { flexDirection: 'row', alignItems: 'center' },
+    fileTextContainer: { marginLeft: 12 },
+    fileLabel: { fontWeight: '600', color: '#2D3748' },
+    fileName: { fontSize: 12, color: '#718096' },
+    uploadButton: { backgroundColor: '#EDF2F7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+    uploadButtonText: { color: '#4A5568', fontWeight: '600' },
+    reviewBox: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, maxHeight: 200, marginBottom: 16 },
+    termsRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
+    checkbox: { width: 20, height: 20, borderWidth: 2, borderColor: '#CBD5E0', borderRadius: 4, justifyContent: 'center', alignItems: 'center' },
+    checkboxChecked: { backgroundColor: '#00B894', borderColor: '#00B894' },
+    termsText: { flex: 1, marginLeft: 12, color: '#718096', fontSize: 14 },
+    linkText: { color: '#00B894', fontWeight: '600' },
 });
 
 export default RegistrationScreen;

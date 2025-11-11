@@ -4,7 +4,7 @@ import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import Geolocation from 'react-native-geolocation-service';
-import { firestore } from '../config/firebase';
+import { firestore } from '../../config/firebase';
 
 interface Location {
   latitude: number;

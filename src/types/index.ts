@@ -37,6 +37,13 @@ export interface Driver {
     completedOrders: number;
     rating: number;
     totalEarnings: number;
+    acceptanceRate: number;
+    onTimeRate: number;
+    cancellationRate: number;
+    level: number;
+    xp: number;
+    xpGoal: number;
+    rank: string;
   };
 }
 
@@ -89,6 +96,21 @@ export interface Order {
   estimatedTime: number;
   createdAt: Date;
   updatedAt: Date;
+  // Additional properties for compatibility
+  customerName?: string;
+  pickupBusiness?: string;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  totalEarnings?: number;
+  date?: string;
+  items?: OrderItem[];
+  chatHistory?: ChatMessage[];
+  earningsBreakdown?: {
+    baseFare: number;
+    distancePay: number;
+    tip: number;
+  };
+  customerRating?: number;
 }
 
 export interface OrderItem {
@@ -143,12 +165,25 @@ export interface CriticalValidation {
   };
 }
 
+export interface Notification {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
+export interface ChatMessage {
+  sender: 'customer' | 'driver' | 'business';
+  text: string;
+  timestamp: string;
+}
+
 export interface NavigationProps {
   navigation: any;
   route: any;
 }
 
 export interface RootStackParamList {
+  [key: string]: undefined | object;
   Onboarding: undefined;
   Registration: undefined;
   Login: undefined;
@@ -169,4 +204,7 @@ export interface RootStackParamList {
   Withdrawal: undefined;
   Settings: undefined;
   Documents: undefined;
+  CustomerTracking: { id: string };
+  OrderCompletion: { order: Order };
+  OrderRating: { order: Order };
 }

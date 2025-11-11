@@ -2,7 +2,7 @@ import React from 'react';
 // FIX: Import Platform from react-native.
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useMockData } from '../hooks/useMockData';
-import { ArrowLeft, Wallet as WalletIcon, Wifi, Lock, AlertCircle, ShoppingBag, Gift, ArrowUpCircle, ArrowDownCircle, DollarSign, Clock } from 'lucide-react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { TransactionType } from '../types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

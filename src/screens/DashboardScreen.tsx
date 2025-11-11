@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import SimpleIcon from '../components/ui/SimpleIcon';
 
 interface NavigationProps {
   navigation?: {
@@ -30,9 +31,16 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
             style={[styles.statusButton, isOnline ? styles.redButton : styles.greenButton]}
             onPress={handleToggleStatus}
           >
-            <Text style={styles.statusButtonText}>
-              {isOnline ? '🔴 Desconectarse' : '🟢 Conectarse'}
-            </Text>
+            <View style={styles.statusButtonContent}>
+              <SimpleIcon 
+                type={isOnline ? 'pause' : 'play'} 
+                size={20} 
+                color="white" 
+              />
+              <Text style={styles.statusButtonText}>
+                {isOnline ? 'Desconectarse' : 'Conectarse'}
+              </Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -55,12 +63,13 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
               <Text style={styles.walletLabel}>Saldo Disponible</Text>
               <Text style={styles.walletBalance}>${balance.toFixed(2)}</Text>
             </View>
+            <SimpleIcon type="wallet" size={24} color="#00B894" />
           </View>
         </TouchableOpacity>
 
         {!isOnline && (
           <View style={[styles.card, styles.centeredCard]}>
-            <Text style={styles.emoji}>⏸️</Text>
+            <SimpleIcon type="pause" size={48} color="#A0AEC0" />
             <Text style={styles.offlineTitle}>Estás desconectado</Text>
             <Text style={styles.offlineSubtitle}>Conéctate para recibir nuevos pedidos.</Text>
           </View>
@@ -68,7 +77,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
 
         {isOnline && (
           <View style={[styles.card, styles.centeredCard]}>
-            <Text style={styles.emoji}>🔍</Text>
+            <SimpleIcon type="search" size={48} color="#00B894" />
             <Text style={styles.onlineTitle}>Buscando pedidos...</Text>
             <Text style={styles.onlineSubtitle}>Te notificaremos cuando haya un nuevo pedido.</Text>
           </View>
@@ -120,12 +129,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
+  statusButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   redButton: { backgroundColor: '#D63031' },
   greenButton: { backgroundColor: '#00B894' },
   statusButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+    marginLeft: 8,
   },
   metricsContainer: {
     flexDirection: 'row',
@@ -164,10 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
   },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
+
   offlineTitle: {
     fontSize: 18,
     fontWeight: 'bold',
