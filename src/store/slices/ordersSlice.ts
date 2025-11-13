@@ -1,10 +1,12 @@
 // Slice de pedidos para BeFast GO
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { firestore, functions, COLLECTIONS, CLOUD_FUNCTIONS } from '../../config/firebase';
-import { Order, OrderStatus, ValidationResult } from '../../types';
+// **CORRECCIÓN: Eliminado 'ValidationResult' que no existe en src/types.ts**
+import { Order, OrderStatus } from '../../types'; 
 
 interface OrdersState {
   availableOrders: Order[];
+  assignedOrders: Order[];
   activeOrder: Order | null;
   orderHistory: Order[];
   isLoading: boolean;
@@ -13,33 +15,60 @@ interface OrdersState {
 
 const initialState: OrdersState = {
   availableOrders: [],
+  assignedOrders: [],
   activeOrder: null,
   orderHistory: [],
   isLoading: false,
   error: null,
 };
 
-// Thunk para escuchar pedidos disponibles
-export const listenForAvailableOrders = createAsyncThunk(
-  'orders/listenForAvailableOrders',
+// Thunk para buscar un pedido activo al iniciar la app
+export const fetchActiveOrder = createAsyncThunk(
+  'orders/fetchActiveOrder',
   async (driverId: string) => {
-    return new Promise((resolve) => {
-      const unsubscribe = firestore()
+    try {
+      // Buscar pedidos que este driverId tenga y que no estén completados
+      const snapshot = await firestore()
         .collection(COLLECTIONS.ORDERS)
-        .where('status', '==', 'SEARCHING')
-        .where('assignedDriverId', '==', null)
-        .onSnapshot(snapshot => {
-          const availableOrders = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Order[];
-          
-          resolve(availableOrders as any);
-        });
+        .where('driverId', '==', driverId)
+        .where('status', 'in', [
+          OrderStatus.ACCEPTED,
+          OrderStatus.PICKED_UP,
+          OrderStatus.ARRIVED,
+          OrderStatus.DELIVERED
+        ])
+        .limit(1)
+        .get();
       
-      // Guardar unsubscribe para limpieza posterior
-      return unsubscribe;
-    });
+      if (snapshot.empty) {
+        return null; // No hay pedido activo
+      }
+      
+      const doc = snapshot.docs[0];
+      const order = { id: doc.id, ...doc.data() } as Order;
+      return order;
+
+    } catch (error: any) {
+      console.error("Error fetching active order:", error);
+      throw new Error(error.message);
+    }
+  }
+);
+
+
+// Thunk para cargar pedidos usando Cloud Function
+export const loadOrders = createAsyncThunk(
+  'orders/loadOrders',
+  async (_, { getState }) => {
+    const { auth } = getState() as { auth: { user?: { uid: string } } };
+    const uid = auth.user?.uid;
+    
+    if (!uid) {
+      throw new Error('Usuario no autenticado');
+    }
+    
+    const { fetchDriverOrders } = await import('../../services/ordersService');
+    return await fetchDriverOrders(uid);
   }
 );
 
@@ -186,9 +215,30 @@ const ordersSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Listen for available orders
-      .addCase(listenForAvailableOrders.fulfilled, (state, action) => {
-        state.availableOrders = action.payload as any;
+      // Manejar el pedido activo cargado
+      .addCase(fetchActiveOrder.fulfilled, (state, action) => {
+        state.activeOrder = action.payload || null;
+      })
+      .addCase(fetchActiveOrder.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchActiveOrder.rejected, (state) => {
+        state.isLoading = false;
+      })
+
+      // Load orders
+      .addCase(loadOrders.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loadOrders.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.availableOrders = action.payload.availableOrders;
+        state.assignedOrders = action.payload.assignedOrders;
+      })
+      .addCase(loadOrders.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message || 'Error cargando pedidos';
       })
       // Accept order
       .addCase(acceptOrder.pending, (state) => {
@@ -199,7 +249,6 @@ const ordersSlice = createSlice({
         state.isLoading = false;
         if (action.payload.success) {
           state.activeOrder = action.payload.order;
-          // Remover de pedidos disponibles
           state.availableOrders = state.availableOrders.filter(
             order => order.id !== action.payload.order.id
           );
@@ -222,7 +271,6 @@ const ordersSlice = createSlice({
       .addCase(completeOrder.fulfilled, (state, action) => {
         state.isLoading = false;
         if (action.payload.success) {
-          // Mover pedido activo al historial
           if (state.activeOrder) {
             state.orderHistory.unshift({
               ...state.activeOrder,
@@ -249,5 +297,7 @@ export const {
   updateAvailableOrders, 
   removeOrderFromAvailable 
 } = ordersSlice.actions;
+
+export { loadOrders };
 
 export default ordersSlice.reducer;

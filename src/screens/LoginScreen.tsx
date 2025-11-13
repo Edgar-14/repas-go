@@ -1,30 +1,52 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, StatusBar, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, StatusBar, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
+import { clearError, loginDriver } from '../store/slices/authSlice';
+import { loadOrders } from '../store/slices/ordersSlice';
+import { auth } from '../config/firebase';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const dispatch = useDispatch<AppDispatch>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+
+  const { isAuthenticated, isLoading, error } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Cargar pedidos después del login exitoso
+      dispatch(loadOrders());
+      navigation.navigate('Main');
+    }
+  }, [isAuthenticated, dispatch]);
 
   const handleLogin = () => {
-    // Mock login logic
-    if (email.toLowerCase() === 'driver@befast.com' && password === 'password') {
-      console.log('Login successful');
-      navigation.navigate('Main');
-    } else {
-      setError('Email o contraseña incorrectos.');
+    dispatch(clearError());
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    if (!normalizedEmail || !password) {
+      return;
     }
+    dispatch(loginDriver({ email: normalizedEmail, password }));
   };
   
   const handleCreateAccount = () => {
     navigation.navigate('Registration');
   };
 
-  const handleForgotPassword = () => {
-    // Por ahora solo muestra un mensaje
-    setError('Contacta a soporte para recuperar tu contraseña.');
+  const handleForgotPassword = async () => {
+    dispatch(clearError());
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    if (!normalizedEmail) {
+      return;
+    }
+    try {
+      await auth().sendPasswordResetEmail(normalizedEmail);
+    } catch (e: any) {
+      // Error silencioso
+    }
   };
 
   return (
@@ -66,14 +88,19 @@ const LoginScreen: React.FC = () => {
                 />
             </View>
             
-            {error && <Text style={styles.errorText}>{error}</Text>}
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
 
             <View style={styles.buttonContainer}>
                 <TouchableOpacity
                     onPress={handleLogin}
-                    style={styles.loginButton}
+                    style={[styles.loginButton, isLoading && { opacity: 0.7 }]}
+                    disabled={isLoading}
                 >
-                    <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                    )}
                 </TouchableOpacity>
             </View>
             

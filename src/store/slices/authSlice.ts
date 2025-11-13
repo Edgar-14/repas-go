@@ -22,12 +22,33 @@ const initialState: AuthState = {
   canReceiveOrders: false,
 };
 
+// Helper para mapear errores de Firebase Auth a mensajes claros en español
+const mapAuthError = (err: any): string => {
+  const code = err?.code || '';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+      return 'Credenciales inválidas. Verifica tu correo y contraseña.';
+    case 'auth/user-not-found':
+      return 'No existe una cuenta con este correo.';
+    case 'auth/too-many-requests':
+      return 'Demasiados intentos. Inténtalo de nuevo más tarde o restablece tu contraseña.';
+    case 'auth/network-request-failed':
+      return 'Error de red. Revisa tu conexión a internet.';
+    case 'auth/invalid-email':
+      return 'El correo no tiene un formato válido.';
+    default:
+      return err?.message || 'Error al iniciar sesión. Intenta de nuevo.';
+  }
+};
+
 // Thunk para login
 export const loginDriver = createAsyncThunk(
   'auth/loginDriver',
   async ({ email, password }: { email: string; password: string }) => {
     try {
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      const normalizedEmail = (email || '').trim().toLowerCase();
+      const userCredential = await auth().signInWithEmailAndPassword(normalizedEmail, password);
       const user = userCredential.user;
       
       // Obtener datos del conductor desde Firestore
@@ -51,7 +72,7 @@ export const loginDriver = createAsyncThunk(
         validation
       };
     } catch (error: any) {
-      throw new Error(error.message);
+      throw new Error(mapAuthError(error));
     }
   }
 );

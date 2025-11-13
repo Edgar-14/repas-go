@@ -1,248 +1,255 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
-import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
-import { useMockData } from '../hooks/useMockData';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import TrackingMap from '../components/map/TrackingMap';
-import { RootStackParamList } from '../types';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { firestore, COLLECTIONS } from '../config/firebase';
+import { Order, OrderStatus } from '../types';
+import SimpleIcon from '../components/ui/SimpleIcon';
 
-type OrderDetailsScreenRouteProp = RouteProp<RootStackParamList, 'OrderDetail'>;
+// **INICIO DE CORRECCIÓN DE TIPOS**
+import { StackScreenProps } from '@react-navigation/stack';
 
-const OrderDetailsScreen: React.FC = () => {
-    const route = useRoute<OrderDetailsScreenRouteProp>();
-    const { orderId } = route.params;
-    const { getOrderById } = useMockData();
-    const navigation = useNavigation();
-    const order = orderId ? getOrderById(orderId) : undefined;
+// Stack principal (de AppNavigator)
+type RootStackParamList = {
+  Main: undefined;
+  Login: undefined;
+  OrderDetail: { orderId: string }; // <-- Esta pantalla recibe un orderId
+  Navigation: { orderId: string };
+  // ... (agrega otras pantallas del Stack si es necesario)
+};
 
-    if (!order) {
-        return <View style={styles.centered}><Text>Pedido no encontrado.</Text></View>;
+// Props para esta pantalla
+type Props = StackScreenProps<RootStackParamList, 'OrderDetail'>;
+// **FIN DE CORRECCIÓN DE TIPOS**
+
+
+const OrderDetailScreen: React.FC<Props> = ({ route, navigation }) => {
+  const { orderId } = route.params;
+  const [loading, setLoading] = useState(true);
+  const [order, setOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = firestore()
+      .collection(COLLECTIONS.ORDERS)
+      .doc(orderId)
+      .onSnapshot((doc) => {
+        // **FIX: doc.exists es una función doc.exists()**
+        if (doc.exists()) {
+          // **FIX: Mapear TODOS los campos de 'Order' de src/types.ts**
+          const data: any = doc.data();
+          const order: Order = {
+            id: doc.id,
+            status: data.status,
+            earnings: data.earnings || data.estimatedEarnings || 0,
+            payment: data.payment || { method: 'TARJETA' },
+            distance: data.distance || 0,
+            pickup: data.pickup || { name: 'Recogida' },
+            customer: data.customer || { name: 'Cliente' },
+            timestamps: data.timestamps || { created: data.createdAt?.toDate ? data.createdAt.toDate() : new Date() },
+          };
+          setOrder(order);
+        } else {
+          Alert.alert("Error", "No se pudo cargar el pedido.");
+          navigation.goBack();
+        }
+        setLoading(false);
+      });
+
+    return () => unsubscribe();
+  }, [orderId, navigation]);
+
+  const getStatusText = (status: OrderStatus) => {
+    switch (status) {
+      case OrderStatus.PENDING: return 'Pendiente';
+      case OrderStatus.ACCEPTED: return 'Aceptado';
+      case OrderStatus.PICKED_UP: return 'Recogido';
+      case OrderStatus.ARRIVED: return 'En destino';
+      case OrderStatus.DELIVERED: return 'Entregado';
+      case OrderStatus.COMPLETED: return 'Completado';
+      default: return status;
     }
+  };
 
-    const earnings = [
-        { label: 'Tarifa Base', value: order.earningsBreakdown?.baseFare || 0 },
-        { label: 'Pago por Distancia', value: order.earningsBreakdown?.distancePay || 0 },
-        { label: 'Propina', value: order.earningsBreakdown?.tip || 0 },
-    ];
+  if (loading) {
+    return <View style={styles.center}><ActivityIndicator size="large" color="#00B894" /></View>;
+  }
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#2D3748" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Detalles del Pedido</Text>
-                <TouchableOpacity>
-                    <MaterialCommunityIcons name="dots-vertical" size={24} color="#2D3748" />
-                </TouchableOpacity>
-            </View>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.earningsBanner}>
-                    <Text style={styles.earningsLabel}>Tu Ganancia Total</Text>
-                    <Text style={styles.earningsValue}>${(order.totalEarnings || order.estimatedEarnings || 0).toFixed(2)}</Text>
-                    <Text style={styles.dateText}>Completado el {order.date ? new Date(order.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) : new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })} a las {order.date ? new Date(order.date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</Text>
-                </View>
+  if (!order) {
+    return <View style={styles.center}><Text>Pedido no encontrado.</Text></View>;
+  }
 
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Ruta del Pedido</Text>
-                    <View style={styles.mapContainer}>
-                         <TrackingMap 
-                            orderId={order.id}
-                            pickupLocation={order.pickup.location}
-                            deliveryLocation={order.delivery.location}
-                            driverId={order.driverId}
-                            showRoute={true}
-                            isPickupPhase={false}
-                        />
-                    </View>
-                    <View style={styles.addressContainer}>
-                        <View style={styles.addressRow}>
-                            <MaterialCommunityIcons name="office-building" size={20} color="#00B894" />
-                            <View style={styles.addressTextContainer}>
-                                <Text style={styles.addressLabel}>Punto de Recogida</Text>
-                                <Text style={styles.addressValue}>{order.pickupAddress || order.pickup.address}</Text>
-                            </View>
-                        </View>
-                         <View style={styles.addressRow}>
-                            <MaterialCommunityIcons name="home" size={20} color="#00B894" />
-                            <View style={styles.addressTextContainer}>
-                                <Text style={styles.addressLabel}>Punto de Entrega</Text>
-                                <Text style={styles.addressValue}>{order.deliveryAddress || order.delivery.address}</Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
+  // Usar order.payment.method y 'EFECTIVO' de src/types.ts
+  const isCash = order.payment.method === 'EFECTIVO';
 
-                 <View style={styles.card}>
-                     <Text style={styles.cardTitle}>Cliente</Text>
-                     <View style={styles.customerInfo}>
-                         <View style={styles.customerAvatar}>
-                            <MaterialCommunityIcons name="account" size={20} color="#00B894" />
-                         </View>
-                         <Text style={styles.customerName}>{order.customerName || order.customer.name}</Text>
-                     </View>
-                 </View>
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.orderId}>Pedido #{order.id.slice(-6)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: '#FF6B35' }]}>
+          <Text style={styles.statusText}>{getStatusText(order.status)}</Text>
+        </View>
+      </View>
 
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Desglose de Ganancias</Text>
-                    <View>
-                        {earnings.map((item, index) => (
-                            <View key={index} style={styles.breakdownRow}>
-                                <Text style={styles.breakdownLabel}>{item.label}</Text>
-                                <Text style={styles.breakdownValue}>${item.value.toFixed(2)}</Text>
-                            </View>
-                        ))}
-                        <View style={styles.divider} />
-                        <View style={styles.breakdownRow}>
-                            <Text style={styles.breakdownTotalLabel}>Total</Text>
-                            <Text style={styles.breakdownTotalValue}>${(order.totalEarnings || order.estimatedEarnings || 0).toFixed(2)}</Text>
-                        </View>
-                    </View>
-                </View>
-            </ScrollView>
-        </SafeAreaView>
-    );
+      {/* Navegación */}
+      {order.status !== OrderStatus.COMPLETED && order.status !== OrderStatus.PENDING && (
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => navigation.navigate('Navigation', { orderId: order.id })}
+        >
+          <SimpleIcon type="navigation" size={20} color="white" />
+          <Text style={styles.navButtonText}>Ver en Mapa</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Usar solo 'customer.name' como define src/types.ts */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Detalles del Cliente</Text>
+        <View style={styles.infoRow}>
+          {/* **FIX (Error 2322): Cambiado 'user' por 'account'** */}
+          <SimpleIcon type="account" size={20} color="#718096" />
+          <Text style={styles.infoText}>{order.customer.name || 'Cliente'}</Text>
+        </View>
+      </View>
+
+      {/* Usar solo 'pickup.name' como define src/types.ts */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Detalles de Recogida</Text>
+        <View style={styles.infoRow}>
+           {/* **FIX (Error 2322): Cambiado 'store' por 'package'** */}
+          <SimpleIcon type="package" size={20} color="#718096" />
+          <Text style={styles.infoText}>{order.pickup.name || 'Tienda'}</Text>
+        </View>
+      </View>
+
+      {/* Usar 'order.earnings' y quitar 'payment.total' */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Resumen Financiero</Text>
+        <View style={styles.financialRow}>
+          <Text style={styles.financialLabel}>Ganancia</Text>
+          <Text style={styles.financialValue}>${order.earnings?.toFixed(2) || '0.00'}</Text>
+        </View>
+        <View style={styles.financialRow}>
+          <Text style={styles.financialLabel}>Propina</Text>
+          <Text style={styles.financialValue}>${order.payment?.tip?.toFixed(2) || '0.00'}</Text>
+        </View>
+        <View style={styles.financialRow}>
+          <Text style={styles.financialLabel}>Método de Pago</Text>
+          <Text style={[styles.financialValue, isCash ? styles.cash : styles.cardText]}>
+            {isCash ? '💵 Efectivo' : '💳 Tarjeta'}
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F7FAFC',
-    },
-    centered: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        backgroundColor: 'white',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#2D3748',
-    },
-    scrollContent: {
-        padding: 16,
-    },
-    earningsBanner: {
-        backgroundColor: '#00B894',
-        borderRadius: 16,
-        padding: 24,
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    earningsLabel: {
-        color: 'white',
-        opacity: 0.8,
-        fontSize: 14,
-    },
-    earningsValue: {
-        color: 'white',
-        fontSize: 48,
-        fontWeight: 'bold',
-    },
-    dateText: {
-        color: 'white',
-        opacity: 0.8,
-        fontSize: 12,
-        marginTop: 4,
-    },
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-    },
-    cardTitle: {
-        fontWeight: 'bold',
-        color: '#2D3748',
-        marginBottom: 12,
-        fontSize: 16,
-    },
-    mapContainer: {
-        height: 192,
-        backgroundColor: '#E2E8F0',
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    addressContainer: {
-        marginTop: 16,
-    },
-    addressRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 6,
-    },
-    addressTextContainer: {
-        marginLeft: 12,
-    },
-    addressLabel: {
-        fontSize: 12,
-        color: '#A0AEC0',
-    },
-    addressValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#4A5568',
-    },
-    customerInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F7FAFC',
-        padding: 12,
-        borderRadius: 8,
-    },
-    customerAvatar: {
-        width: 40,
-        height: 40,
-        backgroundColor: '#E6FFFA',
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    customerName: {
-        fontWeight: '600',
-        color: '#4A5568',
-        marginLeft: 12,
-    },
-    breakdownRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginVertical: 8,
-    },
-    breakdownLabel: {
-        color: '#718096',
-        fontSize: 14,
-    },
-    breakdownValue: {
-        fontWeight: '500',
-        color: '#2D3748',
-        fontSize: 14,
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#EDF2F7',
-        marginVertical: 8,
-    },
-    breakdownTotalLabel: {
-        fontWeight: 'bold',
-        color: '#2D3748',
-        fontSize: 16,
-    },
-    breakdownTotalValue: {
-        fontWeight: 'bold',
-        color: '#00B894',
-        fontSize: 18,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    backgroundColor: 'white',
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  orderId: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D3748',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  navButton: {
+    backgroundColor: '#00B894',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    margin: 16,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  navButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#4A5568',
+    marginLeft: 12,
+    flex: 1,
+  },
+  financialRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  financialLabel: {
+    fontSize: 14,
+    color: '#718096',
+  },
+  financialValue: {
+    fontSize: 14,
+    color: '#2D3748',
+    fontWeight: '600',
+  },
+  cash: { color: '#38A169' },
+  cardText: { color: '#3182CE' },
+  totalLabel: {
+    fontSize: 16,
+    color: '#2D3748',
+    fontWeight: 'bold',
+  },
+  totalValue: {
+    fontSize: 16,
+    color: '#38A169',
+    fontWeight: 'bold',
+  },
 });
 
-
-export default OrderDetailsScreen;
+export default OrderDetailScreen;

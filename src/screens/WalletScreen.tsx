@@ -1,18 +1,30 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 // FIX: Import Platform from react-native.
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
-import { useMockData } from '../hooks/useMockData';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { TransactionType } from '../types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
 
 type WalletScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Wallet'>;
 
 const WalletScreen: React.FC = () => {
-    const { driver, transactions } = useMockData();
+    const dispatch = useDispatch();
+    const driver = useSelector((state: RootState) => (state as any).auth?.driver);
+    const { balance, pendingDebts, transactions } = useSelector((state: RootState) => (state as any).wallet || {});
     const navigation = useNavigation<WalletScreenNavigationProp>();
+
+    useEffect(() => {
+        const driverId = (driver as any)?.uid;
+        if (!driverId) return;
+        // Escuchar saldo y cargar historial real
+        dispatch(fetchTransactionHistory(driverId) as any);
+        dispatch(listenToWalletBalance(driverId) as any);
+    }, [dispatch, driver]);
 
     const transactionIcons = {
         [TransactionType.CARD_ORDER_TRANSFER]: { icon: ShoppingBag, color: '#3B82F6' },
@@ -38,7 +50,7 @@ const WalletScreen: React.FC = () => {
                     </View>
                     <View style={styles.balanceContainer}>
                         <Text style={styles.balanceLabel}>Saldo Disponible</Text>
-                        <Text style={styles.balanceAmount}>${driver.wallet.balance.toFixed(2)}</Text>
+                        <Text style={styles.balanceAmount}>${Number(balance || 0).toFixed(2)}</Text>
                     </View>
                     <View style={styles.walletCardFooter}>
                         <Text style={styles.cardBrand}>BEFASTGO CARD</Text>
@@ -49,7 +61,7 @@ const WalletScreen: React.FC = () => {
                 <View style={[styles.card, styles.debtCard]}>
                     <View>
                         <Text style={styles.debtLabel}>Deuda Pendiente</Text>
-                        <Text style={styles.debtAmount}>${driver.wallet.pendingDebts.toFixed(2)}</Text>
+                        <Text style={styles.debtAmount}>${Number(pendingDebts || 0).toFixed(2)}</Text>
                     </View>
                     <AlertCircle color="#D63031" size={28} />
                 </View>

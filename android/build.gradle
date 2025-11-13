@@ -16,7 +16,12 @@ buildscript {
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
         classpath("com.google.gms:google-services:4.4.2")
+        // Se corrige el nombre del paquete del plugin de secretos de Google Maps
+        classpath("com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1")
     }
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// El bloque 'allprojects' ha sido eliminado para permitir que react-native-maps se compile.
+// Si surgen errores de duplicados, se abordarán de forma más específica.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, Linking, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, Linking } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface EmergencyOptionsModalProps {
@@ -14,31 +14,27 @@ const EmergencyOptionsModal: React.FC<EmergencyOptionsModalProps> = ({ onClose, 
     }
 
     const handleAlert = () => {
-        Alert.alert(
-            'Alerta Enviada',
-            'Se ha enviado una alerta silenciosa a BeFast. Tu ubicación se compartirá en tiempo real con el equipo de seguridad.',
-            [{ text: 'OK', onPress: onClose }]
-        );
+        onClose();
     }
 
     const ActionButton: React.FC<{
         onPress: () => void;
-        icon: React.ElementType;
+        iconName: string;
         title: string;
         subtitle: string;
-    }> = ({ onPress, icon: Icon, title, subtitle }) => (
+    }> = ({ onPress, iconName, title, subtitle }) => (
          <TouchableOpacity 
             onPress={onPress}
             style={styles.actionButton}
         >
             <View style={styles.actionButtonContent}>
-                <Icon size={24} color="#4A5568" />
+                <MaterialCommunityIcons name={iconName} size={24} color="#4A5568" />
                 <View style={styles.actionTextContainer}>
                     <Text style={styles.actionTitle}>{title}</Text>
                     <Text style={styles.actionSubtitle}>{subtitle}</Text>
                 </View>
             </View>
-            <ChevronRight size={20} color="#A0AEC0" />
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#A0AEC0" />
         </TouchableOpacity>
     );
 
@@ -53,17 +49,16 @@ const EmergencyOptionsModal: React.FC<EmergencyOptionsModalProps> = ({ onClose, 
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.header}>
                         <View style={styles.headerTitleContainer}>
-                            <Shield size={20} color="#2D3748" />
+                            <MaterialCommunityIcons name="shield" size={20} color="#2D3748" />
                             <Text style={styles.headerTitle}>Opciones de Emergencia</Text>
                         </View>
                         <TouchableOpacity onPress={onClose}>
-                            <X size={24} color="#718096" />
+                            <MaterialCommunityIcons name="close" size={24} color="#718096" />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.content}>
                         <View style={styles.warningBox}>
-                            <AlertTriangle color="#D63031" size={20} style={styles.warningIcon} />
-                            {/* FIX: Removed invalid <p> tag from Text component. */}
+                            <MaterialCommunityIcons name="alert-triangle" color="#D63031" size={20} style={styles.warningIcon} />
                             <Text style={styles.warningText}>
                                 Si estás en peligro inminente, tu primera acción debe ser contactar a las autoridades locales.
                             </Text>
@@ -72,13 +67,13 @@ const EmergencyOptionsModal: React.FC<EmergencyOptionsModalProps> = ({ onClose, 
                         <View style={styles.actionsList}>
                             <ActionButton 
                                 onPress={() => handleCall('5512345678')}
-                                icon={Phone}
+                                iconName="phone"
                                 title="Contactar Soporte BeFast"
                                 subtitle="Para problemas con el pedido o la app"
                             />
                             <ActionButton 
                                 onPress={handleAlert}
-                                icon={MapPin}
+                                iconName="map-marker"
                                 title="Enviar Alerta Silenciosa"
                                 subtitle="Notifica a BeFast y comparte tu ubicación"
                             />
@@ -88,7 +83,7 @@ const EmergencyOptionsModal: React.FC<EmergencyOptionsModalProps> = ({ onClose, 
                             onPress={() => handleCall('911')}
                             style={styles.emergencyCallButton}
                         >
-                            <Phone size={24} color="white" />
+                            <MaterialCommunityIcons name="phone" size={24} color="white" />
                             <Text style={styles.emergencyCallText}>Llamar a Emergencias (911)</Text>
                         </TouchableOpacity>
                     </View>

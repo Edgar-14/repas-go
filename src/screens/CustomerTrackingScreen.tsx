@@ -1,47 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { useMockData } from '../hooks/useMockData';
 import { Order, OrderStatus, RootStackParamList } from '../types';
 import TrackingMap from '../components/map/TrackingMap';
 import CustomerChat from '../components/chat/CustomerChat';
 import OrderStatusTimeline from '../components/ui/OrderStatusTimeline';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 type CustomerTrackingScreenRouteProp = RouteProp<RootStackParamList, 'CustomerTracking'>;
 
 const CustomerTrackingScreen: React.FC = () => {
     const route = useRoute<CustomerTrackingScreenRouteProp>();
     const { id } = route.params;
-    const { getOrderById } = useMockData();
     const [order, setOrder] = useState<Order | null>(null);
+    const orderFromStore = useSelector((state: RootState) => {
+        const ordersState = (state as any).orders || {};
+        const pool = [ordersState.activeOrder, ...(ordersState.availableOrders || []), ...(ordersState.orderHistory || [])].filter(Boolean);
+        return pool.find((o: any) => o?.id === id) || null;
+    });
 
     useEffect(() => {
         if (id) {
-            const foundOrder = getOrderById(id);
-            if(foundOrder) {
-                setOrder((o: Order | null) => o ? {...o, status: foundOrder.status} : foundOrder);
-
-                // Simulate order status progression for demonstration
-                if (foundOrder.status === OrderStatus.PENDING) {
-                    const statuses = [OrderStatus.ACCEPTED, OrderStatus.PICKED_UP, OrderStatus.IN_TRANSIT, OrderStatus.ARRIVED];
-                    let currentStatusIndex = 0;
-                    
-                    const interval = setInterval(() => {
-                        if (currentStatusIndex < statuses.length) {
-                            setOrder((prev: Order | null) => prev ? {...prev, status: statuses[currentStatusIndex]} : null);
-                            currentStatusIndex++;
-                        } else {
-                            clearInterval(interval);
-                        }
-                    }, 7000); // Change status every 7 seconds
-                    return () => clearInterval(interval);
-                }
+            if (orderFromStore) {
+                setOrder((o: Order | null) => o ? { ...o, status: orderFromStore.status } : orderFromStore);
             } else {
                 setOrder(null);
             }
         }
-    }, [id, getOrderById]);
+    }, [id, orderFromStore]);
 
 
     if (!order) {
@@ -74,7 +62,7 @@ const CustomerTrackingScreen: React.FC = () => {
                 <View style={styles.driverInfo}>
                     <View>
                         <Text style={styles.driverLabel}>Repartidor Asignado</Text>
-                        <Text style={styles.driverName}>Juan Perez</Text>
+                        <Text style={styles.driverName}>{order?.driverId || '—'}</Text>
                     </View>
                     <TouchableOpacity style={styles.phoneButton}>
                         <MaterialCommunityIcons name="phone" size={20} color="#4A5568" />

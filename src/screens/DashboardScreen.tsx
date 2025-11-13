@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import SimpleIcon from '../components/ui/SimpleIcon';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
 
 interface NavigationProps {
   navigation?: {
@@ -9,14 +12,56 @@ interface NavigationProps {
 }
 
 const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
-  const [isOnline, setIsOnline] = useState(false);
-  const [todayOrders, setTodayOrders] = useState(3);
-  const [todayEarnings, setTodayEarnings] = useState(245.50);
-  const [balance, setBalance] = useState(1250.75);
+  const dispatch = useDispatch();
+  const driver = useSelector((state: RootState) => (state as any).auth?.driver);
+  const wallet = useSelector((state: RootState) => (state as any).wallet || {});
+  const ordersState = useSelector((state: RootState) => (state as any).orders || {});
 
-  const handleToggleStatus = () => {
-    setIsOnline(!isOnline);
-  };
+  const isOnline = !!driver?.operational?.isOnline;
+  const balance = Number(wallet?.balance || 0);
+  const transactions = wallet?.transactions || [];
+
+  // Cargar datos al montar
+  useEffect(() => {
+    const driverId = (driver as any)?.uid;
+    if (!driverId) return;
+    dispatch(fetchTransactionHistory(driverId) as any);
+    dispatch(listenToWalletBalance(driverId) as any);
+  }, [dispatch, driver]);
+
+  // Agregados: pedidos y ganancias de hoy, pedidos de la semana
+  const { todayOrders, todayEarnings, weekOrders, rating, acceptanceRate } = useMemo(() => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 7);
+
+    let tOrders = 0;
+    let tEarnings = 0;
+    let wOrders = 0;
+
+    (transactions || []).forEach((tx: any) => {
+      const ts = tx?.timestamp;
+      const d: Date = tx?.date ? new Date(tx.date) : (ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : new Date()));
+      const type = tx?.type || '';
+
+      // Contamos pedidos como transferencias por pedido con tarjeta
+      if (type === 'CARD_ORDER_TRANSFER') {
+        if (d >= startOfDay) tOrders += 1;
+        if (d >= startOfWeek) wOrders += 1;
+        if (d >= startOfDay) tEarnings += Number(tx.amount || 0);
+      }
+      // Sumamos propinas del día a las ganancias de hoy
+      if (type === 'TIP_CARD_TRANSFER' && d >= startOfDay) {
+        tEarnings += Number(tx.amount || 0);
+      }
+    });
+
+    const r = driver?.stats?.rating ?? null;
+    const ar = driver?.stats?.acceptanceRate ?? null;
+
+    return { todayOrders: tOrders, todayEarnings: tEarnings, weekOrders: wOrders, rating: r, acceptanceRate: ar };
+  }, [transactions, driver]);
 
   return (
     <ScrollView style={styles.container}>
@@ -29,7 +74,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
           </View>
           <TouchableOpacity
             style={[styles.statusButton, isOnline ? styles.redButton : styles.greenButton]}
-            onPress={handleToggleStatus}
+            onPress={() => { /* TODO: integrar toggle real de estado online/offline */ }}
           >
             <View style={styles.statusButtonContent}>
               <SimpleIcon 
@@ -51,7 +96,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <Text style={styles.metricLabel}>Pedidos Hoy</Text>
           </View>
           <View style={[styles.card, styles.metricCard]}>
-            <Text style={styles.metricValue}>${todayEarnings.toFixed(2)}</Text>
+            <Text style={styles.metricValue}>${Number(todayEarnings || 0).toFixed(2)}</Text>
             <Text style={styles.metricLabel}>Ganado Hoy</Text>
           </View>
         </View>
@@ -61,7 +106,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
           <View style={styles.walletContainer}>
             <View>
               <Text style={styles.walletLabel}>Saldo Disponible</Text>
-              <Text style={styles.walletBalance}>${balance.toFixed(2)}</Text>
+              <Text style={styles.walletBalance}>${Number(balance || 0).toFixed(2)}</Text>
             </View>
             <SimpleIcon type="wallet" size={24} color="#00B894" />
           </View>
@@ -79,30 +124,32 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
         <View style={styles.widgetsContainer}>
           <View style={[styles.card, styles.widget]}>
             <Text style={styles.widgetTitle}>Calificación</Text>
-            <Text style={styles.widgetValue}>4.8 ⭐</Text>
-            <Text style={styles.widgetSubtext}>Excelente</Text>
+            <Text style={styles.widgetValue}>{rating != null ? `${rating} ⭐` : '—'}</Text>
+            <Text style={styles.widgetSubtext}>{rating != null ? 'Actual' : 'Sin datos'}</Text>
           </View>
           
           <View style={[styles.card, styles.widget]}>
-            <Text style={styles.widgetTitle}>Eficiencia</Text>
-            <Text style={styles.widgetValue}>92%</Text>
-            <Text style={styles.widgetSubtext}>Muy buena</Text>
+            <Text style={styles.widgetTitle}>Aceptación</Text>
+            <Text style={styles.widgetValue}>{acceptanceRate != null ? `${acceptanceRate}%` : '—'}</Text>
+            <Text style={styles.widgetSubtext}>{acceptanceRate != null ? 'Últimos 7 días' : 'Sin datos'}</Text>
           </View>
         </View>
 
         <View style={styles.widgetsContainer}>
           <View style={[styles.card, styles.widget]}>
             <Text style={styles.widgetTitle}>Pedidos Semana</Text>
-            <Text style={styles.widgetValue}>28</Text>
-            <Text style={styles.widgetSubtext}>+12% vs anterior</Text>
+            <Text style={styles.widgetValue}>{weekOrders}</Text>
+            <Text style={styles.widgetSubtext}>Últimos 7 días</Text>
           </View>
           
           <View style={[styles.card, styles.widget]}>
             <Text style={styles.widgetTitle}>Tiempo Promedio</Text>
-            <Text style={styles.widgetValue}>18 min</Text>
+            <Text style={styles.widgetValue}>—</Text>
             <Text style={styles.widgetSubtext}>Por entrega</Text>
           </View>
         </View>
+
+        {/* Accesos rápidos eliminados para mantener el Dashboard original sin elementos extra */}
 
         {isOnline && (
           <View style={[styles.card, styles.centeredCard]}>
@@ -253,6 +300,21 @@ const styles = StyleSheet.create({
   widgetSubtext: {
     fontSize: 12,
     color: '#00B894',
+  },
+  widgetRowInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF2F7',
+  },
+  widgetRowTitle: {
+    color: '#4A5568',
+    fontSize: 14,
+  },
+  widgetRowStatus: {
+    fontSize: 16,
   },
 });
 

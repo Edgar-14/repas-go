@@ -6,13 +6,14 @@ import firestore from '@react-native-firebase/firestore';
 import messaging from '@react-native-firebase/messaging';
 import storage from '@react-native-firebase/storage';
 import functions from '@react-native-firebase/functions';
+import { emitNewOrder } from '../utils/EventBus';
 
 // Configuración del proyecto (coincide con google-services.json)
 const firebaseConfig = {
   projectId: "befast-hfkbl",
   authDomain: "befast-hfkbl.firebaseapp.com",
   databaseURL: "https://befast-hfkbl-default-rtdb.firebaseio.com",
-  storageBucket: "befast-hfkbl.firebasestorage.app",
+  storageBucket: "befast-hfkbl.appspot.com",
   messagingSenderId: "897579485656",
   appId: "1:897579485656:android:c307afdda53e9328a84aad"
 };
@@ -103,8 +104,8 @@ export const setupNotificationListeners = () => {
     console.log('Foreground message:', remoteMessage);
     
     if (remoteMessage.data?.type === 'NEW_ORDER') {
-      // Mostrar notificación de nuevo pedido
-      // Esta función se implementará en el componente correspondiente
+      // Emitir evento global para abrir el modal de nuevo pedido
+      emitNewOrder(remoteMessage.data);
     }
   });
   

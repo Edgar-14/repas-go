@@ -1,6 +1,27 @@
 import { GoogleGenerativeAI, GenerateContentResponse, SchemaType } from "@google/generative-ai";
 
-const ai = new GoogleGenerativeAI(process.env.API_KEY || 'your-api-key-here');
+let ai: GoogleGenerativeAI | null = null;
+
+// Función para inicializar el servicio con una clave de API
+export const initializeGeminiService = (apiKey: string) => {
+    if (!apiKey) {
+        console.error("No API key provided for Gemini service.");
+        ai = null;
+        return;
+    }
+    try {
+        ai = new GoogleGenerativeAI(apiKey);
+    } catch (error) {
+        console.error("Failed to initialize GoogleGenerativeAI:", error);
+        ai = null;
+    }
+};
+
+// Intenta inicializar desde variables de entorno al cargar, como fallback
+const apiKeyFromEnv = process.env.API_KEY || (global as any)?.GEMINI_API_KEY;
+if (apiKeyFromEnv) {
+    initializeGeminiService(apiKeyFromEnv);
+}
 
 interface GeminiResponse {
     text: string;
@@ -14,6 +35,9 @@ export const getGeminiChatResponse = async (
     useMaps: boolean,
     location?: { latitude: number; longitude: number; }
 ): Promise<GeminiResponse> => {
+    if (!ai) {
+        return { text: "El servicio de IA no está inicializado. Por favor, configura una API Key.", groundingChunks: [] };
+    }
     try {
         const modelName = useThinkingMode ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
 
@@ -27,7 +51,6 @@ export const getGeminiChatResponse = async (
         
         if (useMaps) {
             tools.push({ googleMaps: {} });
-            // Using a default location for demo purposes. In a real app, this would be the user's current location.
             toolConfig.retrievalConfig = {
                 latLng: location || {
                     latitude: 19.4326,
@@ -62,6 +85,12 @@ export const getGeminiQuickReplies = async (
     lastMessage: string,
     recipient: 'driver' | 'customer'
 ): Promise<string[]> => {
+    if (!ai) {
+        console.warn("Gemini service not initialized. Returning fallback quick replies.");
+        return recipient === 'driver' 
+            ? ["¡Entendido!", "Voy en camino.", "Gracias."]
+            : ["¿Dónde vienes?", "Gracias", "Te espero afuera"];
+    }
     try {
         const prompt = recipient === 'driver' 
             ? `Un cliente de delivery te envió este mensaje: "${lastMessage}". Eres el repartidor. Genera 3 respuestas cortas, profesionales y amigables. No más de 5 palabras por respuesta.`
@@ -87,7 +116,6 @@ export const getGeminiQuickReplies = async (
         return Array.isArray(replies) ? replies.slice(0, 3) : [];
     } catch (error) {
         console.error("Error getting quick replies from Gemini:", error);
-        // Fallback replies based on recipient
         return recipient === 'driver' 
             ? ["¡Entendido!", "Voy en camino.", "Gracias."]
             : ["¿Dónde vienes?", "Gracias", "Te espero afuera"];

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import SimpleIcon from '../components/ui/SimpleIcon';
+import { auth, firestore, COLLECTIONS } from '../config/firebase';
 
-interface Payment {
+interface PaymentItem {
   id: string;
   amount: number;
   method: string;
@@ -12,12 +13,37 @@ interface Payment {
 }
 
 const PaymentsHistoryScreen: React.FC = () => {
-    const payments: Payment[] = [
-        { id: '1', amount: 245.50, method: 'Transferencia SPEI', date: '2024-01-15', status: 'Completado' },
-        { id: '2', amount: 180.75, method: 'Depósito a tarjeta', date: '2024-01-14', status: 'Completado' },
-        { id: '3', amount: 320.00, method: 'Transferencia SPEI', date: '2024-01-13', status: 'Pendiente' }
-    ];
     const navigation = useNavigation();
+    const [payments, setPayments] = useState<PaymentItem[]>([]);
+
+    useEffect(() => {
+        const uid = auth().currentUser?.uid;
+        if (!uid) { setPayments([]); return; }
+        const unsub = firestore()
+            .collection(COLLECTIONS.WALLET_TRANSACTIONS)
+            .where('driverId', '==', uid)
+            .where('type', '==', 'WITHDRAWAL')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .onSnapshot(snap => {
+                const list: PaymentItem[] = [];
+                snap.forEach(d => {
+                    const data: any = d.data();
+                    list.push({
+                        id: d.id,
+                        amount: Math.abs(data.amount || 0),
+                        method: data.method === 'bank_transfer' ? 'Transferencia SPEI' : 'Depósito a tarjeta',
+                        date: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                        status: (data.status === 'COMPLETED' ? 'Completado' : data.status === 'PENDING' ? 'Pendiente' : 'Fallido') as PaymentItem['status'],
+                    });
+                });
+                setPayments(list);
+            }, err => {
+                console.error('Error loading payments history:', err);
+                setPayments([]);
+            });
+        return () => unsub();
+    }, []);
 
     const getStatusIcon = (status: string) => {
         switch(status) {
@@ -28,7 +54,7 @@ const PaymentsHistoryScreen: React.FC = () => {
         }
     };
 
-    const renderItem = ({ item }: { item: Payment }) => (
+    const renderItem = ({ item }: { item: PaymentItem }) => (
         <View style={styles.paymentItem}>
             <View style={styles.itemContent}>
                 {getStatusIcon(item.status)}
@@ -45,19 +71,25 @@ const PaymentsHistoryScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <TouchableOpacity onPress={() => (navigation as any).goBack()} style={styles.backButton}>
                     <SimpleIcon type="arrow-left" size={24} color="#2D3748" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Historial de Pagos</Text>
             </View>
 
-            <FlatList
-                data={payments}
-                renderItem={renderItem}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContainer}
-                ItemSeparatorComponent={() => <View style={styles.separator} />}
-            />
+            {payments.length === 0 ? (
+                <View style={{ padding: 16 }}>
+                    <Text style={{ color: '#4A5568' }}>Aún no hay retiros registrados.</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={payments}
+                    renderItem={renderItem}
+                    keyExtractor={item => item.id}
+                    contentContainerStyle={styles.listContainer}
+                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                />
+            )}
         </SafeAreaView>
     );
 };

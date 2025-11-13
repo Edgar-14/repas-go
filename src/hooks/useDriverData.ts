@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { firestore, COLLECTIONS } from '../config/firebase';
-import { useAuth } from './useAuth';
 import { Driver } from '../types';
+import { RootState } from '../store';
 
 export const useDriverData = () => {
-  const { driver: authDriver } = useAuth();
+  const authDriver = useSelector((state: RootState) => state.auth.driver);
   const [driverData, setDriverData] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -16,7 +17,7 @@ export const useDriverData = () => {
     }
 
     setLoading(true);
-    
+
     const unsubscribe = firestore()
       .collection(COLLECTIONS.DRIVERS)
       .doc(authDriver.uid)
@@ -32,15 +33,14 @@ export const useDriverData = () => {
           setLoading(false);
         },
         (err) => {
-          console.error("Error escuchando datos del repartidor:", err);
+          console.error('Error escuchando datos del repartidor:', err);
           setError(err);
           setLoading(false);
         }
       );
 
     return () => unsubscribe();
-
-  }, [authDriver]);
+  }, [authDriver?.uid]);
 
   return { driverData, loading, error };
 };

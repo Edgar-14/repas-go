@@ -1,0 +1,4 @@
+// ARCHIVO ELIMINADO - LÓGICA INCORRECTA
+// Este hook usaba status: 'PENDING' y actualizaba Firestore directamente
+// La lógica correcta está en src/store/slices/ordersSlice.ts
+// que usa status: 'SEARCHING' y Cloud Functions del ecosistema

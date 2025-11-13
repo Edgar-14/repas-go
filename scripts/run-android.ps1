@@ -1,68 +1,105 @@
-# Uso: ejecuta este script y él detecta si hay dispositivo físico conectado.
-# - Si hay dispositivo físico, aplica `adb reverse` para Metro (8081).
-# - Si hay emulador o nada, ejecuta build normal.
+# Uso: ejecuta este script y él detecta si hay dispositivo físico o emulador, elige puerto libre para Metro,
+# aplica 'adb reverse' al puerto correcto cuando hay dispositivo físico, y fuerza la instalación en el
+# dispositivo/emulador disponible para evitar seriales obsoletos.
 
-# Colors for output
+# Colores para la salida
 function Write-Info($msg) { Write-Host "[INFO] $msg" -ForegroundColor Cyan }
 function Write-Warn($msg) { Write-Host "[WARN] $msg" -ForegroundColor Yellow }
 function Write-Err($msg)  { Write-Host "[ERROR] $msg" -ForegroundColor Red }
 
-# Move to repo root (script is in scripts/)
+# Helpers
+function Test-PortBusy($port) {
+  try {
+    $conn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+    return $null -ne $conn
+  } catch {
+    # Fallback con netstat si Get-NetTCPConnection no está disponible
+    $net = netstat -ano | Select-String ":$port\s+.*LISTENING" -ErrorAction SilentlyContinue
+    return $net -ne $null
+  }
+}
+
+function Get-FreePort([int]$start = 8081) {
+  $p = $start
+  for ($i=0; $i -lt 20; $i++) {
+    if (-not (Test-PortBusy $p)) { return $p }
+    $p++
+  }
+  return $start
+}
+
+function Get-AndroidDevices() {
+  $result = @{ Physical=@(); Emulators=@(); All=@() }
+  try {
+    $adbOut = (& adb devices) 2>$null
+    if ($LASTEXITCODE -ne 0 -or -not $adbOut) { return $result }
+    $lines = $adbOut -split "`n" | Where-Object { $_ -match "\tdevice$" -and $_ -notmatch "List of devices" }
+    foreach ($ln in $lines) {
+      $serial = ($ln -split "\s+")[0]
+      if (-not [string]::IsNullOrWhiteSpace($serial)) {
+        $result.All += $serial
+        if ($serial -match '^emulator-') { $result.Emulators += $serial } else { $result.Physical += $serial }
+      }
+    }
+  } catch {}
+  return $result
+}
+
+# Ir a la raíz del repo (el script está en scripts/)
 Set-Location -Path (Resolve-Path "$PSScriptRoot\..")
 
-# 0) Detect device type using adb (if available)
-$applyReverse = $false
-try {
-  $adbOutput = (& adb devices) 2>$null
-  if ($LASTEXITCODE -eq 0 -and $adbOutput) {
-    $deviceLines = $adbOutput -split "`n" | Where-Object { $_ -match "\tdevice$" -and $_ -notmatch "List of devices" }
-    $serials = @()
-    foreach ($line in $deviceLines) {
-      $serial = ($line -split "\s+")[0]
-      if ($serial) { $serials += $serial }
-    }
-    if ($serials.Count -gt 0) {
-      $physical = $serials | Where-Object { $_ -notmatch "^emulator-" }
-      if ($physical.Count -gt 0) {
-        $applyReverse = $true
-        Write-Info "Detectado(s) dispositivo(s) físico(s): $($physical -join ', ') -> aplicar 'adb reverse'."
-      } else {
-        Write-Info "Detectado emulador Android -> no se requiere 'adb reverse'."
-      }
-    } else {
-      Write-Warn "No se detectan dispositivos/emuladores mediante 'adb devices'. Continuando de todas formas..."
-    }
-  } else {
-    Write-Warn "'adb' no disponible o sin salida. Continuando sin detección."
-  }
-} catch {
-  Write-Warn "No se pudo ejecutar 'adb'. Continuando sin detección."
+# 0) Elegir puerto para Metro
+$metroPort = Get-FreePort 8081
+if ($metroPort -ne 8081) {
+  Write-Warn "El puerto 8081 está en uso. Usaré el puerto $metroPort para Metro y adb reverse."
 }
 
-# 1) Start Metro bundler in a new PowerShell window
-Write-Info "Iniciando Metro bundler..."
-Start-Process powershell -ArgumentList "-NoExit","-Command","npm run start" | Out-Null
+# 1) Detectar dispositivos disponibles (al inicio)
+$devices = Get-AndroidDevices
+$targetSerial = $null
+if ($devices.Physical.Count -gt 0) {
+  $targetSerial = $devices.Physical[0]
+  Write-Info "Dispositivo físico detectado: $targetSerial"
+} elseif ($devices.Emulators.Count -gt 0) {
+  $targetSerial = $devices.Emulators[0]
+  Write-Info "Emulador detectado: $targetSerial"
+} else {
+  Write-Warn "No se detectan dispositivos/emuladores por ahora. Continuaré y dejaré que la CLI intente lanzar en el primero disponible."
+}
+
+# 2) Iniciar Metro en una nueva ventana con el puerto elegido
+Write-Info "Iniciando Metro bundler en puerto $metroPort..."
+Start-Process powershell -ArgumentList "-NoExit","-Command","npx react-native start --port $metroPort" | Out-Null
 Start-Sleep -Seconds 2
 
-# 2) Apply adb reverse for physical device if needed
+# 3) Si hay dispositivo físico, aplicar adb reverse al puerto elegido (revalida antes de aplicar)
+$applyReverse = $false
+if ($devices.Physical.Count -gt 0) { $applyReverse = $true }
 if ($applyReverse) {
-  Write-Info "Aplicando adb reverse al puerto 8081 para dispositivo físico..."
-  try {
-    & adb reverse tcp:8081 tcp:8081 | Out-Null
-  } catch {
-    Write-Warn "No se pudo ejecutar 'adb reverse'. Asegúrate de tener Android Platform Tools en el PATH."
+  # Revalidar que el serial sigue conectado
+  $now = Get-AndroidDevices
+  if ($now.Physical -notcontains $targetSerial) {
+    if ($now.Physical.Count -gt 0) { $targetSerial = $now.Physical[0] } else { $applyReverse = $false }
+  }
+  if ($applyReverse) {
+    Write-Info "Aplicando adb reverse tcp:$metroPort -> tcp:$metroPort para $targetSerial"
+    try { & adb -s $targetSerial reverse tcp:$metroPort tcp:$metroPort | Out-Null }
+    catch { Write-Warn "Fallo 'adb reverse'. Verifica permisos USB y que la pantalla esté desbloqueada." }
   }
 }
 
-# 3) Build & run the Android app
+# 4) Compilar e instalar
 Write-Info "Compilando e instalando la app en Android..."
-# Use npx to ensure local CLI is used
 $npx = "npx"
 
+# Construir argumentos para run-android
+$runArgs = @('react-native','run-android','--port',"$metroPort")
+if ($targetSerial) { $runArgs += @('--deviceId', "$targetSerial") }
+
 try {
-  & $npx react-native run-android
+  & $npx @runArgs
 } catch {
-  Write-Err "Fallo al correr 'react-native run-android'. Revisa que Android SDK/Emulador estén configurados."
+  Write-Err "Fallo al correr 'react-native run-android'. Revisa SDK/Emulador. Detalle: $($_.Exception.Message)"
   exit 1
 }
 

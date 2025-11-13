@@ -1,21 +1,58 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
 import SimpleIcon from '../components/ui/SimpleIcon';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { logoutDriver } from '../store/slices/authSlice';
+// **FIX 1:** Importamos los tipos necesarios para la navegación compuesta
+import { CompositeScreenProps } from '@react-navigation/native';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { StackScreenProps } from '@react-navigation/stack';
 
-interface NavigationProps {
-  navigation?: {
-    navigate: (screen: string) => void;
-    replace: (screen: string) => void;
-  };
-}
+// **FIX 1:** Definimos el Stack de Navegación principal (de AppNavigator.tsx)
+type RootStackParamList = {
+  Login: undefined;
+  Registration: undefined;
+  Onboarding: undefined;
+  Main: undefined; // Esta es la pantalla que contiene los Tabs
+  OrderDetail: any;
+  OrderCompletion: any;
+  OrderRating: any;
+  GPSNavigation: any;
+  DeliveryConfirmation: any;
+  PaymentsHistory: any;
+  Metrics: any;
+  Settings: any;
+  Documents: any;
+  Emergency: any;
+  Incidents: any;
+};
 
-const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
-    const driver = {
-        personalData: {
-            fullName: 'Juan Pérez Repartidor'
-        },
-        email: 'driver@befast.com'
-    };
+// **FIX 1:** Definimos el Tab Navigator (de AppNavigator.tsx)
+type MainTabParamList = {
+  Dashboard: undefined;
+  Orders: undefined;
+  Navigation: undefined;
+  Payments: undefined;
+  Notifications: undefined;
+  Profile: undefined;
+};
+
+// **FIX 1:** Creamos las props compuestas.
+// Le decimos que es una pantalla 'Profile' (del Tab)
+// anidada dentro de un 'RootStackParamList' (del Stack).
+type ProfileScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Profile'>,
+  StackScreenProps<RootStackParamList>
+>;
+
+
+const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
+    const dispatch = useDispatch();
+    const authDriver = useSelector((state: RootState) => (state as any).auth?.driver);
+    const user = useSelector((state: RootState) => (state as any).auth?.user);
+    const fullName = authDriver?.personalData?.fullName || 'Conductor';
+    const email = authDriver?.email || user?.email || '—';
 
     const handleLogout = () => {
         Alert.alert(
@@ -23,7 +60,18 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
             '¿Estás seguro que deseas cerrar sesión?',
             [
                 { text: 'Cancelar', style: 'cancel' },
-                { text: 'Cerrar Sesión', onPress: () => navigation?.replace('Login') }
+                { text: 'Cerrar Sesión', onPress: async () => {
+                    try {
+                        await (dispatch as any)(logoutDriver());
+                        // **FIX 2:** Ahora 'navigation.replace' es válido
+                        // porque el tipo 'CompositeScreenProps' incluye
+                        // las acciones del Stack Navigator padre.
+                        navigation.replace('Login');
+                    } catch (e) {
+                        // fallback de navegación aún si falla el signOut
+                        navigation.replace('Login');
+                    }
+                } }
             ]
         );
     };
@@ -46,8 +94,8 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
                        <Text style={styles.avatarEmoji}>🧑</Text>
                     </View>
                     <View>
-                        <Text style={styles.fullName}>{driver.personalData.fullName}</Text>
-                        <Text style={styles.email}>{driver.email}</Text>
+                        <Text style={styles.fullName}>{fullName}</Text>
+                        <Text style={styles.email}>{email}</Text>
                     </View>
                 </View>
 
@@ -56,7 +104,8 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
                         <TouchableOpacity 
                             key={index} 
                             style={[styles.menuItem, index === menuItems.length - 1 && styles.lastMenuItem]}
-                            onPress={() => navigation?.navigate(item.screen)}
+                            // 'navigate' funciona para ir a otras pantallas del Stack
+                            onPress={() => navigation.navigate(item.screen as any)}
                         >
                            <View style={styles.menuItemContent}>
                                <SimpleIcon 
@@ -83,6 +132,7 @@ const ProfileScreen: React.FC<NavigationProps> = ({ navigation }) => {
     );
 };
 
+// ... (Los estilos son exactamente los mismos, no necesitan cambios)
 const styles = StyleSheet.create({
     container: {
         flex: 1,

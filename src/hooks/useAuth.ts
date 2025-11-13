@@ -1,55 +1,35 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Driver, Order } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth, firestore, COLLECTIONS } from '../config/firebase';
 
 const useAuth = () => {
   const [loading, setLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Mock authenticated
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeOrder, setActiveOrderState] = useState<Order | null>(null);
-  const [driver, setDriver] = useState<Driver>({
-    uid: 'driver123',
-    email: 'driver@befast.com',
-    personalData: {
-      fullName: 'Juan Pérez',
-      phone: '+52 55 1234 5678',
-      rfc: 'PEJX800101XXX',
-      curp: 'PEJX800101HDFXXX01',
-      nss: '12345678901'
-    },
-    administrative: {
-      befastStatus: 'ACTIVE',
-      imssStatus: 'ACTIVO_COTIZANDO',
-      documentsStatus: 'APPROVED',
-      trainingStatus: 'COMPLETED',
-      idseApproved: true
-    },
-    operational: {
-      isOnline: false,
-      status: 'OFFLINE',
-      currentOrderId: null
-    },
-    wallet: {
-      balance: 1250.75,
-      pendingDebts: 85.50,
-      creditLimit: 5000
-    },
-    stats: {
-      totalOrders: 150,
-      completedOrders: 145,
-      rating: 4.9,
-      totalEarnings: 25000,
-      acceptanceRate: 92,
-      onTimeRate: 98,
-      cancellationRate: 2,
-      level: 12,
-      xp: 1850,
-      xpGoal: 2500,
-      rank: 'Diamante'
-    }
-  });
+  const [driver, setDriver] = useState<Driver | any>(null);
 
   useEffect(() => {
+    const unsub = auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        try {
+          const doc = await firestore().collection(COLLECTIONS.DRIVERS).doc(user.uid).get();
+          if (doc.exists) {
+            setDriver(doc.data() as Driver);
+          } else {
+            setDriver(null);
+          }
+        } catch (e) {
+          // Silenciar errores
+        }
+      } else {
+        setIsAuthenticated(false);
+        setDriver(null);
+      }
+    });
     loadAuthState();
+    return () => unsub();
   }, []);
 
   const loadAuthState = async () => {
@@ -59,23 +39,26 @@ const useAuth = () => {
         setActiveOrderState(JSON.parse(savedOrder));
       }
     } catch (error) {
-      console.error('Error loading auth state:', error);
+      // Silenciar errores
     }
   };
 
-  const updateStatus = useCallback((newStatus: boolean) => {
+  const updateStatus = useCallback(async (newStatus: boolean) => {
+    const uid = auth().currentUser?.uid;
+    if (!uid) return;
     setLoading(true);
-    setTimeout(() => {
-      setDriver(prev => ({
-        ...prev,
-        operational: { 
-          ...prev.operational,
+    try {
+      await firestore().collection(COLLECTIONS.DRIVERS).doc(uid).set({
+        operational: {
           isOnline: newStatus,
-          status: newStatus ? 'ACTIVE' : 'OFFLINE'
-        },
-      }));
+          status: newStatus ? 'ACTIVE' : 'OFFLINE',
+        }
+      }, { merge: true });
+    } catch (e) {
+      // Silenciar errores
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   }, []);
 
   const setActiveOrder = useCallback(async (order: Order | null) => {
@@ -87,18 +70,18 @@ const useAuth = () => {
       }
       setActiveOrderState(order);
     } catch (error) {
-      console.error('Error saving active order:', error);
+      // Silenciar errores
     }
   }, []);
 
-  const login = useCallback(async (driverData: Driver) => {
-    setDriver(driverData);
-    setIsAuthenticated(true);
+  const login = useCallback(async (_driverData: Driver) => {
+    setIsAuthenticated(!!auth().currentUser);
   }, []);
 
   const logout = useCallback(async () => {
     await AsyncStorage.multiRemove(['activeOrder']);
     setActiveOrderState(null);
+    await auth().signOut();
     setIsAuthenticated(false);
   }, []);
 

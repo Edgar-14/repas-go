@@ -9,7 +9,7 @@ export interface Order {
     method: 'TARJETA' | 'EFECTIVO';
     tip?: number;
   };
-  status: 'DELIVERED' | 'COMPLETED' | 'PENDING' | 'ACCEPTED';
+  status: OrderStatus;
   timestamps: {
     created: Date;
   };

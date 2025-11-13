@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { auth } from '../config/firebase';
+import { createAuthUserIfNeeded, uploadDocumentIfAny, createOrUpdateApplication, RegistrationPayload, refreshEmailVerified, sendVerificationEmail } from '../services/registration';
 // Importas el componente de íconos REAL
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -27,6 +29,8 @@ const ArrowLeft = (props: { color: string, style?: any, size?: number }) => <Mat
 const RegistrationScreen: React.FC = () => {
     const navigation = useNavigation();
     const [step, setStep] = useState(1);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         // Step 1
         fullName: '', email: '', phone: '', password: '',
@@ -61,9 +65,72 @@ const RegistrationScreen: React.FC = () => {
         setFormData(prev => ({ ...prev, [name]: mockFile }));
     };
     
-    const handleSubmit = () => {
-        console.log('Submitting application:', formData);
-        handleNext();
+    const handleSubmit = async () => {
+        try {
+            setSubmitError(null);
+            setSubmitting(true);
+            // 1) Ensure Auth user exists
+            const user = await createAuthUserIfNeeded(formData.email, formData.password);
+            const uid = user.uid;
+
+            // Optionally refresh emailVerified flag
+            let emailVerified = false;
+            try {
+                emailVerified = await refreshEmailVerified();
+            } catch {}
+
+            // 2) Upload documents if provided
+            const ineUrl = await uploadDocumentIfAny(uid, 'ine', formData.idDoc);
+            const satUrl = await uploadDocumentIfAny(uid, 'sat', formData.satDoc);
+            const licenseUrl = await uploadDocumentIfAny(uid, 'license', formData.licenseDoc);
+            const circulationCardUrl = await uploadDocumentIfAny(uid, 'circulation', formData.registrationDoc);
+            const equipmentPhotoUrl = await uploadDocumentIfAny(uid, 'equipment', formData.equipmentPhoto);
+
+            // 3) Build payload and write application (PENDING)
+            const payload: RegistrationPayload = {
+                personalData: {
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    rfc: formData.rfc,
+                    curp: formData.curp,
+                    nss: formData.nss,
+                },
+                vehicle: {
+                    type: formData.vehicleType,
+                    make: formData.vehicleMake,
+                    model: formData.vehicleModel,
+                    plate: formData.vehiclePlate,
+                },
+                bank: {
+                    accountHolder: formData.bankAccountHolder,
+                    clabe: formData.bankAccountCLABE,
+                },
+                documents: {
+                    ineUrl,
+                    satUrl,
+                    licenseUrl,
+                    circulationCardUrl,
+                    equipmentPhotoUrl,
+                },
+                agreements: {
+                    accepted: !!formData.agreementsAccepted,
+                },
+                training: {
+                    quizPassed: formData.quizAnswer === 'B' && !!formData.equipmentPhoto,
+                },
+                meta: { app: 'mobile', emailVerified },
+            };
+
+            await createOrUpdateApplication(uid, payload);
+
+            // 4) Success → move to success step
+            setSubmitting(false);
+            setStep(6);
+        } catch (e: any) {
+            setSubmitting(false);
+            setSubmitError(e?.message || 'Error al enviar la solicitud. Inténtalo de nuevo.');
+        }
     };
 
     // Componente FileUpload con íconos corregidos
@@ -215,7 +282,15 @@ const RegistrationScreen: React.FC = () => {
                             <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <Check color="white" size={12}/>}</View>
                             <Text style={styles.termsText}>Confirmo que toda la información es correcta y acepto los <Text style={styles.linkText}>Términos y Condiciones</Text>.</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={handleSubmit} disabled={!formData.termsAccepted} style={[styles.nextButton, !formData.termsAccepted && styles.disabledButton]}><Text style={styles.nextButtonText}>Enviar Solicitud</Text></TouchableOpacity>
+                        {/* Información sobre verificación de correo */}
+                        <Text style={[styles.reviewText, { marginTop: 8 }]}>Nota: Te enviaremos un correo para verificar tu cuenta. Si no lo ves, revisa tu carpeta de spam.</Text>
+                        <TouchableOpacity onPress={() => sendVerificationEmail().catch(() => {})} style={[styles.uploadButton, { alignSelf: 'flex-start', marginTop: 8 }]}>
+                            <Text style={styles.uploadButtonText}>Reenviar verificación de correo</Text>
+                        </TouchableOpacity>
+                        {submitError && <Text style={[styles.quizFeedback, { marginTop: 12 }]}>{submitError}</Text>}
+                        <TouchableOpacity onPress={handleSubmit} disabled={!formData.termsAccepted || submitting} style={[styles.nextButton, (!formData.termsAccepted || submitting) && styles.disabledButton]}>
+                            {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.nextButtonText}>Enviar Solicitud</Text>}
+                        </TouchableOpacity>
                     </View>
                 );
             case 6: // Pantalla de éxito

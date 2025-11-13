@@ -1,0 +1,7 @@
+Open source licenses and notices for third-party software included in this application.
+
+Google Navigation SDK for Android
+Copyright 2025 Google LLC
+Licensed under the terms accompanying the SDK distribution.
+
+See also: https://developers.google.com/maps/terms

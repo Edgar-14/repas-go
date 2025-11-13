@@ -1,25 +1,48 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SvgUri } from 'react-native-svg';
-import { useMockData } from '../hooks/useMockData';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 const MetricsScreen: React.FC = () => {
     const navigation = useNavigation();
-    const { driver, weeklySummary } = useMockData();
+    const driver = useSelector((state: RootState) => (state as any).auth?.driver);
+    const transactions = useSelector((state: RootState) => (state as any).wallet?.transactions || []);
 
-    const earningsData = [
-        { label: 'Tarifas Base', value: 850.25, color: '#3B82F6' },
-        { label: 'Distancia', value: 350.50, color: '#22C55E' },
-        { label: 'Propinas', value: 150.00, color: '#FBBF24' },
-    ];
-
-    const performanceTrends = [
-        { label: 'Calificación', value: driver.stats.rating, trend: 'up', color: '#FBBF24' },
-        { label: 'Aceptación', value: `${driver.stats.acceptanceRate}%`, trend: 'down', color: '#22C55E' }
-    ];
-
-    const activityData = [ 8, 12, 18, 25, 30, 45, 60, 90, 75, 50, 30, 15 ];
+    const { earningsData, trends, weeklyEarnings, activityData } = useMemo(() => {
+        // Calcular propinas y ganancias de la semana con transacciones reales
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - 7);
+        let weeklyTips = 0;
+        let weeklyTotal = 0;
+        const hourlyBuckets: number[] = new Array(12).fill(0); // 24h agrupado en bloques de 2h
+        (transactions || []).forEach((tx: any) => {
+            const ts = tx?.timestamp;
+            const d: Date = tx?.date ? new Date(tx.date) : (ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : new Date()));
+            if (d >= startOfWeek) {
+                if (tx.type === 'TIP_CARD_TRANSFER') weeklyTips += tx.amount || 0;
+                if (tx.type === 'CARD_ORDER_TRANSFER') weeklyTotal += tx.amount || 0;
+                const hour = d.getHours();
+                const bucket = Math.floor(hour / 2);
+                if (bucket >= 0 && bucket < hourlyBuckets.length) hourlyBuckets[bucket] += Math.abs(tx.amount || 0);
+            }
+        });
+        // Normalizar para gráfico de barras (0-100)
+        const maxBucket = Math.max(1, ...hourlyBuckets);
+        const activity = hourlyBuckets.map(v => Math.round((v / maxBucket) * 100));
+        const other = Math.max(weeklyTotal - weeklyTips, 0);
+        const ed = [
+            { label: 'Propinas', value: weeklyTips, color: '#FBBF24' },
+            { label: 'Otros', value: other, color: '#3B82F6' },
+        ];
+        const t = [
+            { label: 'Calificación', value: driver?.stats?.rating ?? '-', trend: 'up', color: '#FBBF24' },
+            { label: 'Aceptación', value: driver?.stats?.acceptanceRate != null ? `${driver.stats.acceptanceRate}%` : '-', trend: 'up', color: '#22C55E' }
+        ];
+        return { earningsData: ed, trends: t, weeklyEarnings: weeklyTotal, activityData: activity };
+    }, [transactions, driver]);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -38,7 +61,7 @@ const MetricsScreen: React.FC = () => {
                     <View style={styles.earningsChartContainer}>
                         <View style={styles.earningsBar}>
                             {earningsData.map(item => (
-                                <View key={item.label} style={{ backgroundColor: item.color, width: `${(item.value / weeklySummary.earnings) * 100}%` }} />
+                                <View key={item.label} style={{ backgroundColor: item.color, width: `${weeklyEarnings > 0 ? (item.value / weeklyEarnings) * 100 : 0}%` }} />
                             ))}
                         </View>
                         <View style={styles.legendContainer}>
@@ -59,7 +82,7 @@ const MetricsScreen: React.FC = () => {
                         <Text style={styles.cardTitle}>Tendencias de Rendimiento</Text>
                     </View>
                      <View style={styles.trendsContainer}>
-                        {performanceTrends.map(item => (
+                        {trends.map(item => (
                              <View key={item.label} style={styles.trendItem}>
                                 <View style={styles.trendHeader}>
                                     <View style={{flexDirection: 'row', alignItems: 'center'}}>

@@ -1,232 +1,209 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import MapView, { Circle } from 'react-native-maps';
-import SimpleIcon from '../components/ui/SimpleIcon';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { Order, OrderStatus } from '../types';
+import { firestore, COLLECTIONS } from '../config/firebase';
+import { updateOrderStatus } from '../store/slices/ordersSlice';
+// Asumo que tienes un componente de mapa aquí
+// import TrackingMap from '../components/map/TrackingMap';
 
-interface NavigationProps {
-  navigation?: {
-    navigate: (screen: string) => void;
-  };
-}
+// **INICIO DE CORRECCIÓN DE TIPOS**
+import { CompositeScreenProps } from '@react-navigation/native';
+import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { StackScreenProps } from '@react-navigation/stack';
 
-const NavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
-
-    const legendItems = [
-        { color: '#D63031', label: 'Alta Demanda' },
-        { color: '#FBBF24', label: 'Moderada' },
-        { color: '#22C55E', label: 'Baja' },
-    ];
-    
-    const mexicoCityRegion = {
-        latitude: 19.4326,
-        longitude: -99.1332,
-        latitudeDelta: 0.15,
-        longitudeDelta: 0.15,
-    };
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Mapa de Demanda</Text>
-                <TouchableOpacity 
-                    style={styles.gpsButton}
-                    onPress={() => navigation?.navigate('GPSNavigation')}
-                >
-                    <SimpleIcon type="navigation" size={20} color="#FFFFFF" />
-                    <Text style={styles.gpsButtonText}>GPS</Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.content}>
-                <View style={styles.card}>
-                    <View style={styles.cardHeader}>
-                        <MaterialCommunityIcons name="map" size={20} color="#00B894" />
-                        <Text style={styles.cardTitle}>Mapa de Demanda en Vivo</Text>
-                    </View>
-                    
-                    <View style={styles.mapContainer}>
-                        <MapView
-                            style={StyleSheet.absoluteFill}
-                            initialRegion={mexicoCityRegion}
-                            provider="google"
-                            customMapStyle={mapStyle} // Applying grayscale style
-                        >
-                            {/* Heatmap hotspots simulation with react-native-maps */}
-                             <Circle
-                                center={{ latitude: 19.42, longitude: -99.16 }}
-                                radius={1500}
-                                fillColor="rgba(214, 48, 49, 0.2)"
-                                strokeWidth={0}
-                            />
-                             <Circle
-                                center={{ latitude: 19.425, longitude: -99.165 }}
-                                radius={1000}
-                                fillColor="rgba(214, 48, 49, 0.3)"
-                                strokeWidth={0}
-                            />
-                            <Circle
-                                center={{ latitude: 19.45, longitude: -99.14 }}
-                                radius={2000}
-                                fillColor="rgba(251, 191, 36, 0.2)"
-                                strokeWidth={0}
-                            />
-                              <Circle
-                                center={{ latitude: 19.40, longitude: -99.18 }}
-                                radius={800}
-                                fillColor="rgba(251, 191, 36, 0.3)"
-                                strokeWidth={0}
-                            />
-                        </MapView>
-                    </View>
-                    
-                    <View style={styles.legend}>
-                        <Text style={styles.legendTitle}>Notificaciones de Demanda:</Text>
-                        <View style={styles.legendItems}>
-                            {legendItems.map(item => (
-                                <View key={item.label} style={styles.legendItem}>
-                                    <View style={[styles.legendDot, { backgroundColor: item.color }]}/>
-                                    <Text style={styles.legendLabel}>{item.label}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </View>
-                </View>
-                
-                <View style={styles.statusGrid}>
-                     <View style={[styles.card, styles.statusCard]}>
-                        <MaterialCommunityIcons name="wifi" size={28} color="#00B894" />
-                        <Text style={styles.statusTitle}>Estado de Red</Text>
-                        <Text style={styles.statusValue}>Excelente</Text>
-                     </View>
-                      <View style={[styles.card, styles.statusCard]}>
-                        <MaterialCommunityIcons name="satellite-variant" size={28} color="#00B894" />
-                        <Text style={styles.statusTitle}>Señal GPS</Text>
-                        <Text style={styles.statusValue}>Fuerte</Text>
-                     </View>
-                </View>
-            </View>
-        </SafeAreaView>
-    );
+// Stack principal (de AppNavigator)
+type RootStackParamList = {
+  Main: undefined;
+  Login: undefined;
+  OrderDetail: { orderId: string };
+  OrderCompletion: { orderId: string };
+  // ... (agrega otras pantallas del Stack si es necesario)
 };
 
-const mapStyle = [
-  { "stylers": [{ "saturation": -100 }, { "gamma": 0.8 }, { "lightness": 4 }, { "visibility": "on" }] }
-];
+// Tab principal (de AppNavigator)
+type MainTabParamList = {
+  Dashboard: undefined;
+  Orders: undefined;
+  Navigation: { orderId?: string }; // <-- Esta pantalla recibe un orderId opcional
+  Payments: undefined;
+  Notifications: undefined;
+  Profile: undefined;
+};
+
+// Props compuestas para esta pantalla
+type NavigationScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Navigation'>,
+  StackScreenProps<RootStackParamList>
+>;
+// **FIN DE CORRECCIÓN DE TIPOS**
+
+
+const NavigationScreen: React.FC<NavigationScreenProps> = ({ navigation, route }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { activeOrder } = useSelector((state: RootState) => state.orders);
+  const { user } = useSelector((state: RootState) => state.auth);
+  
+  const [loading, setLoading] = useState(true);
+  const [orderData, setOrderData] = useState<Order | null>(null);
+
+  const orderId = (route.params as any)?.orderId || activeOrder?.id;
+
+  useEffect(() => {
+    if (!orderId) {
+      setOrderData(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const unsubscribe = firestore()
+      .collection(COLLECTIONS.ORDERS)
+      .doc(orderId)
+      .onSnapshot((doc) => {
+        // **FIX 1 (Error 2774): doc.exists es una función doc.exists()**
+        if (doc.exists()) {
+          // **FIX 2 (Error 2352): Mapear TODOS los campos de 'Order' de src/types.ts**
+          const data: any = doc.data();
+          const order: Order = {
+            id: doc.id,
+            status: data.status,
+            earnings: data.earnings || data.estimatedEarnings || 0,
+            payment: data.payment || { method: 'TARJETA' },
+            distance: data.distance || 0,
+            pickup: data.pickup || { name: 'Recogida' },
+            customer: data.customer || { name: 'Cliente' },
+            timestamps: data.timestamps || { created: data.createdAt?.toDate ? data.createdAt.toDate() : new Date() },
+          };
+          setOrderData(order);
+        } else {
+          Alert.alert("Error", "No se encontró el pedido.");
+          setOrderData(null);
+        }
+        setLoading(false);
+      });
+
+    return () => unsubscribe();
+  }, [orderId]);
+
+  const handleUpdateStatus = (newStatus: OrderStatus) => {
+    if (!orderId || !user?.uid) return;
+    
+    dispatch(updateOrderStatus({ orderId, status: newStatus, driverId: user.uid }));
+  };
+
+  if (loading) {
+    return <View style={styles.center}><ActivityIndicator size="large" color="#00B894" /></View>;
+  }
+
+  if (!orderData) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.noOrderText}>No hay ningún pedido activo.</Text>
+        <Text style={styles.noOrderSubtitle}>El mapa se activará cuando aceptes un pedido.</Text>
+      </View>
+    );
+  }
+
+  // Define los 'markers' para el mapa basados en el pedido
+  // const markers = [
+  //   { id: 'pickup', latlng: orderData.pickup.latlng, title: 'Recoger', description: orderData.pickup.name },
+  //   { id: 'delivery', latlng: orderData.customer.latlng, title: 'Entregar', description: orderData.customer.name }
+  // ];
+
+  return (
+    <View style={styles.container}>
+      {/* <TrackingMap
+        driverLocation={orderData.driverLocation} // Esta prop no está en tu tipo Order
+        markers={markers}
+        orderStatus={orderData.status}
+      /> */}
+      <View style={styles.center}>
+        <Text style={styles.noOrderText}>Componente de Mapa (TrackingMap) iría aquí</Text>
+        <Text>Pedido: {orderData.id}</Text>
+        <Text>Estado: {orderData.status}</Text>
+      </View>
+      
+      {/* Acciones del pedido */}
+      <View style={styles.actionsContainer}>
+        {orderData.status === OrderStatus.ACCEPTED && (
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => handleUpdateStatus(OrderStatus.PICKED_UP)}
+          >
+            <Text style={styles.buttonText}>Marcar como Recogido</Text>
+          </TouchableOpacity>
+        )}
+        {orderData.status === OrderStatus.PICKED_UP && (
+          <TouchableOpacity 
+            style={styles.actionButton} 
+            onPress={() => handleUpdateStatus(OrderStatus.ARRIVED)}
+          >
+            <Text style={styles.buttonText}>Llegué al Destino</Text>
+          </TouchableOpacity>
+        )}
+        {orderData.status === OrderStatus.ARRIVED && (
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.completeButton]} 
+            onPress={() => navigation.navigate('OrderCompletion', { orderId: orderData.id })}
+          >
+            <Text style={styles.buttonText}>Completar Entrega</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F7FAFC',
-    },
-    header: {
-        padding: 16,
-        backgroundColor: 'white',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#2D3748',
-    },
-    gpsButton: {
-        backgroundColor: '#007AFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        position: 'absolute',
-        right: 16,
-    },
-    gpsButtonText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginLeft: 4,
-    },
-    content: {
-        padding: 16,
-    },
-    card: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 2,
-        marginBottom: 16,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    cardTitle: {
-        color: '#4A5568',
-        fontWeight: 'bold',
-        fontSize: 18,
-        marginLeft: 8,
-    },
-    mapContainer: {
-        height: 384, // 24rem
-        backgroundColor: '#E2E8F0',
-        borderRadius: 8,
-        overflow: 'hidden',
-        marginTop: 16,
-    },
-    legend: {
-        marginTop: 8
-    },
-    legendTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#718096',
-        marginBottom: 8,
-    },
-    legendItems: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-    },
-    legendItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    legendDot: {
-        width: 16,
-        height: 16,
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.1)',
-    },
-    legendLabel: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: '#4A5568',
-        marginLeft: 8,
-    },
-    statusGrid: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    statusCard: {
-        flex: 1,
-        alignItems: 'center',
-        marginHorizontal: 4,
-    },
-    statusTitle: {
-        fontWeight: '600',
-        color: '#2D3748',
-        marginTop: 8,
-    },
-    statusValue: {
-        fontSize: 14,
-        color: '#22C55E',
-        fontWeight: 'bold',
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#F7FAFC',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  noOrderText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2D3748',
+    textAlign: 'center',
+  },
+  noOrderSubtitle: {
+    fontSize: 14,
+    color: '#718096',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  actionsContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+  },
+  actionButton: {
+    backgroundColor: '#00B894',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  completeButton: {
+    backgroundColor: '#2196F3',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default NavigationScreen;

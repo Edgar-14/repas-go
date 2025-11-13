@@ -1,0 +1,5 @@
+This app uses Google Navigation SDK for Android.
+
+Required attributions and notices are provided by Google.
+
+For full details, consult the LICENSES.txt file bundled alongside this notice.

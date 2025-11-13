@@ -1,31 +1,32 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
 import SimpleIcon from '../components/ui/SimpleIcon';
-import FloatingChatButton from '../components/ui/FloatingChatButton';
+import DriverChatWidget from '../components/ui/DriverChatWidget';
+import NewOrderModal from '../components/modals/NewOrderModal';
+import { hideNewOrderModal } from '../store/slices/notificationsSlice';
 
 // Screens
 import {
   LoginScreen,
   DashboardScreen,
   OrderDetailScreen,
-  OrdersScreen,
+  OrdersScreen, // Esta pantalla ahora maneja Disponibles e Historial
   NavigationScreen,
   ProfileScreen,
   PaymentsScreen,
   PaymentsHistoryScreen,
-  OrdersHistoryScreen,
+  // OrdersHistoryScreen, // <-- CORRECCIÓN: Eliminada esta importación
   NotificationsScreen,
   EmergencyScreen,
   SettingsScreen,
   DocumentsScreen,
   DeliveryConfirmationScreen,
   IncidentsScreen,
-  ChatScreen,
+
   MetricsScreen,
   OrderCompletionScreen,
   OrderRatingScreen,
@@ -33,6 +34,7 @@ import {
   RegistrationScreen,
   GPSNavigationScreen
 } from '../screens';
+import SplashScreen from '../screens/SplashScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -47,7 +49,9 @@ const MainTabNavigator = () => {
   const unreadCount = (notifications as any)?.unreadCount || 0;
   
   return (
-    <Tab.Navigator
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <View style={{ flex: 1 }}>
+      <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#00B894',
@@ -60,20 +64,24 @@ const MainTabNavigator = () => {
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 10,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 70,
+          paddingBottom: 20,
+          paddingTop: 12,
+          height: 85,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
+          marginTop: 2,
+          marginBottom: 4,
+        },
+        tabBarIconStyle: {
           marginTop: 4,
         },
       }}
     >
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        component={DashboardScreen as any}
         options={{
           tabBarLabel: 'Inicio',
           tabBarIcon: ({ focused }) => (
@@ -88,7 +96,7 @@ const MainTabNavigator = () => {
       
       <Tab.Screen
         name="Orders"
-        component={OrdersScreen}
+        component={OrdersScreen as any}
         options={{
           tabBarLabel: 'Pedidos',
           tabBarIcon: ({ focused }) => (
@@ -105,7 +113,7 @@ const MainTabNavigator = () => {
       
       <Tab.Screen
         name="Navigation"
-        component={NavigationScreen}
+        component={NavigationScreen as any}
         options={{
           tabBarLabel: 'Mapa',
           tabBarIcon: ({ focused }) => (
@@ -120,7 +128,7 @@ const MainTabNavigator = () => {
       
       <Tab.Screen
         name="Payments"
-        component={PaymentsScreen}
+        component={PaymentsScreen as any}
         options={{
           tabBarLabel: 'Billetera',
           tabBarIcon: ({ focused }) => (
@@ -135,7 +143,7 @@ const MainTabNavigator = () => {
       
       <Tab.Screen
         name="Notifications"
-        component={NotificationsScreen}
+        component={NotificationsScreen as any}
         options={{
           tabBarLabel: 'Avisos',
           tabBarIcon: ({ focused }) => (
@@ -152,7 +160,7 @@ const MainTabNavigator = () => {
       
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileScreen as any}
         options={{
           tabBarLabel: 'Perfil',
           tabBarIcon: ({ focused }) => (
@@ -164,14 +172,25 @@ const MainTabNavigator = () => {
           ),
         }}
       />
-    </Tab.Navigator>
+      </Tab.Navigator>
+      <DriverChatWidget />
+      </View>
+    </SafeAreaView>
   );
 };
 
 // Main Stack Navigator with All Screens
 const AppNavigator = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  const { newOrderToShow } = useSelector((state: RootState) => state.notifications);
+  const [showSplash, setShowSplash] = React.useState(true);
+
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
   return (
-    <NavigationContainer>
+    <View style={{ flex: 1 }}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
@@ -230,22 +249,18 @@ const AppNavigator = () => {
           component={OrderRatingScreen as any}
           options={{ title: 'Calificar Cliente' }}
         />
-        <Stack.Screen
+        
+        {/* CORRECCIÓN: Eliminada la pantalla 'OrdersHistory'
+          La funcionalidad de historial ahora vive dentro de la pantalla 'Orders'
+          que está en el Tab Navigator (MainTabNavigator).
+        */}
+        {/* <Stack.Screen
           name="OrdersHistory"
           component={OrdersHistoryScreen as any}
           options={{ title: 'Historial de Pedidos' }}
-        />
+        /> */}
 
         {/* Navigation & Delivery */}
-        <Stack.Screen
-          name="Navigation"
-          component={NavigationScreen as any}
-          options={{ 
-            title: 'Mapa de Demanda',
-            headerStyle: { backgroundColor: '#FFFFFF' },
-            headerTintColor: '#2D3748'
-          }}
-        />
         <Stack.Screen
           name="GPSNavigation"
           component={GPSNavigationScreen as any}
@@ -265,7 +280,7 @@ const AppNavigator = () => {
           }}
         />
 
-        {/* Financial - WalletScreen eliminada (duplicada) */}
+        {/* Financial */}
         <Stack.Screen
           name="PaymentsHistory"
           component={PaymentsHistoryScreen as any}
@@ -277,32 +292,24 @@ const AppNavigator = () => {
           options={{ title: 'Mis Estadísticas' }}
         />
 
-        {/* Communication */}
-        <Stack.Screen
-          name="Chat"
-          component={ChatScreen as any}
-          options={{ 
-            headerShown: false,
-            gestureEnabled: false
-          }}
-        />
+
 
         {/* Settings & Profile */}
         <Stack.Screen
           name="Settings"
-          component={SettingsScreen}
+          component={SettingsScreen as any}
           options={{ title: 'Configuración' }}
         />
         <Stack.Screen
           name="Documents"
-          component={DocumentsScreen}
+          component={DocumentsScreen as any}
           options={{ title: 'Mis Documentos' }}
         />
 
         {/* Emergency & Support */}
         <Stack.Screen
           name="Emergency"
-          component={EmergencyScreen}
+          component={EmergencyScreen as any}
           options={{ 
             title: 'Emergencia',
             headerStyle: { backgroundColor: '#FF3B30' },
@@ -315,8 +322,14 @@ const AppNavigator = () => {
           options={{ title: 'Reportar Incidente' }}
         />
       </Stack.Navigator>
-      <FloatingChatButton />
-    </NavigationContainer>
+      
+      {/* Global NewOrderModal */}
+      <NewOrderModal
+        visible={!!newOrderToShow}
+        data={newOrderToShow}
+        onClose={() => dispatch(hideNewOrderModal())}
+      />
+    </View>
   );
 };
 

@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, FlatList } from 'react-native';
 import SimpleIcon from '../components/ui/SimpleIcon';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
+import { TransactionType } from '../types';
 
 interface NavigationProps {
   navigation?: {
@@ -9,27 +13,50 @@ interface NavigationProps {
 }
 
 const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
-    const wallet = {
-        balance: 1250.75,
-        pendingDebts: 0,
-        weeklyEarnings: 2450.30
-    };
-    
-    const stats = {
-        weeklyEarnings: 2450.30,
-        monthlyEarnings: 8450.90,
-        totalTips: 340.50,
-        totalBonuses: 125.00,
-        cardOrders: 18,
-        cashOrders: 12
-    };
+    const dispatch = useDispatch();
+    const driver = useSelector((state: RootState) => (state as any).auth?.driver);
+    const { balance, pendingDebts, transactions } = useSelector((state: RootState) => (state as any).wallet || {});
 
-    const transactions = [
-        { id: '1', type: 'EARNING', amount: 85.50, description: 'Entrega #12345', date: '2024-01-15', status: 'COMPLETED' },
-        { id: '2', type: 'WITHDRAWAL', amount: -500.00, description: 'Retiro a cuenta bancaria', date: '2024-01-14', status: 'COMPLETED' },
-        { id: '3', type: 'EARNING', amount: 92.30, description: 'Entrega #12344', date: '2024-01-14', status: 'COMPLETED' },
-        { id: '4', type: 'EARNING', amount: 67.80, description: 'Entrega #12343', date: '2024-01-13', status: 'COMPLETED' },
-    ];
+    useEffect(() => {
+        const driverId = (driver as any)?.uid;
+        if (!driverId) return;
+        dispatch(fetchTransactionHistory(driverId) as any);
+        dispatch(listenToWalletBalance(driverId) as any);
+    }, [dispatch, driver]);
+
+    const aggregates = useMemo(() => {
+        let weeklyEarnings = 0;
+        let monthlyEarnings = 0;
+        let totalTips = 0;
+        let totalBonuses = 0;
+        let cardOrders = 0;
+        let cashOrders = 0;
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - 7);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        (transactions || []).forEach((tx: any) => {
+            const ts = tx?.timestamp;
+            const d = tx?.date
+                ? new Date(tx.date)
+                : (ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : new Date()));
+            // EARNINGS and WITHDRAWAL types depend on backend; use description heuristics if no type
+            const type = tx.type || '';
+            if (type === 'CARD_ORDER_TRANSFER') {
+                if (d >= startOfWeek) weeklyEarnings += tx.amount || 0;
+                if (d >= startOfMonth) monthlyEarnings += tx.amount || 0;
+                cardOrders += 1;
+            } else if (type === 'CASH_ORDER_ADEUDO') {
+                cashOrders += 1;
+            } else if (type === 'TIP_CARD_TRANSFER') {
+                totalTips += tx.amount || 0;
+            } else if (type === 'BONUS') {
+                totalBonuses += tx.amount || 0;
+            }
+        });
+        return { weeklyEarnings, monthlyEarnings, totalTips, totalBonuses, cardOrders, cashOrders };
+    }, [transactions]);
 
     const handleWithdraw = () => {
         navigation?.navigate('Withdraw');
@@ -51,24 +78,30 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
         }
     };
 
-    const renderTransaction = ({ item }: { item: any }) => (
-        <View style={styles.transactionItem}>
-            <View style={styles.transactionLeft}>
-                <SimpleIcon 
-                    type={getTransactionIcon(item.type)} 
-                    size={24} 
-                    color={getTransactionColor(item.type)} 
-                />
-                <View style={styles.transactionInfo}>
-                    <Text style={styles.transactionDescription}>{item.description}</Text>
-                    <Text style={styles.transactionDate}>{item.date}</Text>
+    const renderTransaction = ({ item }: { item: any }) => {
+        const ts = item?.timestamp;
+        const dateStr = item?.date
+            ? item.date
+            : (ts?.toDate ? ts.toDate().toLocaleString() : (ts ? new Date(ts).toLocaleString() : ''));
+        return (
+            <View style={styles.transactionItem}>
+                <View style={styles.transactionLeft}>
+                    <SimpleIcon 
+                        type={getTransactionIcon(item.type)} 
+                        size={24} 
+                        color={getTransactionColor(item.type)} 
+                    />
+                    <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionDescription}>{item.description}</Text>
+                        <Text style={styles.transactionDate}>{dateStr}</Text>
+                    </View>
                 </View>
+                <Text style={[styles.transactionAmount, { color: getTransactionColor(item.type) }]}>
+                    ${Math.abs(item.amount).toFixed(2)}
+                </Text>
             </View>
-            <Text style={[styles.transactionAmount, { color: getTransactionColor(item.type) }]}>
-                ${Math.abs(item.amount).toFixed(2)}
-            </Text>
-        </View>
-    );
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -80,47 +113,47 @@ const PaymentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
                 {/* Balance Card */}
                 <View style={styles.balanceCard}>
                     <Text style={styles.balanceLabel}>Saldo Disponible</Text>
-                    <Text style={styles.balanceAmount}>${wallet.balance.toFixed(2)}</Text>
+                    <Text style={styles.balanceAmount}>${Number(balance || 0).toFixed(2)}</Text>
                     <TouchableOpacity style={styles.withdrawButton} onPress={handleWithdraw}>
                         <SimpleIcon type="bank" size={20} color="white" />
                         <Text style={styles.withdrawButtonText}>Retirar</Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* Earnings Widgets */}
+                {/* Earnings Widgets (datos en vivo) */}
                 <View style={styles.widgetsContainer}>
                     <View style={[styles.earningsCard, styles.widget]}>
                         <Text style={styles.earningsLabel}>Semana</Text>
-                        <Text style={styles.earningsAmount}>${stats.weeklyEarnings.toFixed(2)}</Text>
+                        <Text style={styles.earningsAmount}>${aggregates.weeklyEarnings.toFixed(2)}</Text>
                     </View>
                     
                     <View style={[styles.earningsCard, styles.widget]}>
                         <Text style={styles.earningsLabel}>Mes</Text>
-                        <Text style={styles.earningsAmount}>${stats.monthlyEarnings.toFixed(2)}</Text>
+                        <Text style={styles.earningsAmount}>${aggregates.monthlyEarnings.toFixed(2)}</Text>
                     </View>
                 </View>
                 
                 <View style={styles.widgetsContainer}>
                     <View style={[styles.earningsCard, styles.widget]}>
                         <Text style={styles.earningsLabel}>Propinas</Text>
-                        <Text style={styles.earningsAmount}>${stats.totalTips.toFixed(2)}</Text>
+                        <Text style={styles.earningsAmount}>${aggregates.totalTips.toFixed(2)}</Text>
                     </View>
                     
                     <View style={[styles.earningsCard, styles.widget]}>
                         <Text style={styles.earningsLabel}>Bonos</Text>
-                        <Text style={styles.earningsAmount}>${stats.totalBonuses.toFixed(2)}</Text>
+                        <Text style={styles.earningsAmount}>${aggregates.totalBonuses.toFixed(2)}</Text>
                     </View>
                 </View>
                 
                 <View style={styles.widgetsContainer}>
                     <View style={[styles.earningsCard, styles.widget]}>
                         <Text style={styles.earningsLabel}>💳 Tarjeta</Text>
-                        <Text style={styles.ordersAmount}>{stats.cardOrders}</Text>
+                        <Text style={styles.ordersAmount}>{aggregates.cardOrders}</Text>
                     </View>
                     
                     <View style={[styles.earningsCard, styles.widget]}>
                         <Text style={styles.earningsLabel}>💵 Efectivo</Text>
-                        <Text style={styles.ordersAmount}>{stats.cashOrders}</Text>
+                        <Text style={styles.ordersAmount}>{aggregates.cashOrders}</Text>
                     </View>
                 </View>
 

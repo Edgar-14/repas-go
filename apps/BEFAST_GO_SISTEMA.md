@@ -213,7 +213,7 @@ interface Driver {
 
 ## 🔄 FLUJO COMPLETO: REGISTRO → ACTIVACIÓN → OPERACIÓN
 
-### Fase 1: Registro (Portal Web EXCLUSIVAMENTE)
+### Fase 1: Registro (Portal Web EXCLUSIVAMENTt)
 
 **Ubicación**: Portal Web de Repartidores (`/repartidores/signup/`)
 

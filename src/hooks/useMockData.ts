@@ -199,15 +199,103 @@ const weeklySummary = {
     hours: 32,
 };
 
+import { auth, firestore, COLLECTIONS } from '../config/firebase';
+
 export const useMockData = () => {
-    const [driver, setDriver] = useState<Driver>(initialDriver);
-    const [orders, setOrders] = useState<Order[]>(initialOrders);
-    
-    const toggleOnlineStatus = useCallback(() => {
-        setDriver(prev => ({ ...prev, operational: { ...prev.operational, isOnline: !prev.operational.isOnline } }));
+    const [driver, setDriver] = useState<Driver>({
+        personalData: { fullName: '' },
+        email: '',
+        operational: { isOnline: false },
+        stats: undefined,
+        wallet: { balance: 0, pendingDebts: 0 },
+    });
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [transactions, setTransactions] = useState<any[]>([]);
+    const [weeklySummary, setWeeklySummary] = useState<{ earnings: number; trips: number; hours: number }>({ earnings: 0, trips: 0, hours: 0 });
+
+    // Suscribirse a datos reales de Firestore
+    React.useEffect(() => {
+        const uid = auth().currentUser?.uid;
+        if (!uid) return;
+        const unsubDriver = firestore().collection(COLLECTIONS.DRIVERS).doc(uid).onSnapshot((doc) => {
+            const data = doc.data() as any;
+            if (data) {
+                setDriver({
+                    personalData: { fullName: data.personalData?.fullName || '' },
+                    email: data.email || '',
+                    operational: { isOnline: !!data.operational?.isOnline },
+                    stats: data.stats,
+                    wallet: { balance: data.wallet?.balance || 0, pendingDebts: data.wallet?.pendingDebts || 0 },
+                });
+            }
+        });
+        const unsubOrders = firestore()
+            .collection(COLLECTIONS.ORDERS)
+            .where('driverId', '==', uid)
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .onSnapshot((snap) => {
+                const list: Order[] = [];
+                let earnings = 0;
+                let trips = 0;
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                snap.forEach((d) => {
+                    const data: any = d.data();
+                    const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+                    list.push({
+                        id: d.id,
+                        status: data.status,
+                        earnings: data.estimatedEarnings || 0,
+                        payment: { method: (data.paymentMethod === 'CARD' ? 'TARJETA' : 'EFECTIVO'), tip: data.tip },
+                        distance: data.distance || 0,
+                        pickup: { name: data.pickup?.businessName || 'Pickup' },
+                        customer: { name: data.customer?.name || 'Cliente' },
+                        timestamps: { created: createdAt },
+                        driverId: data.driverId,
+                    });
+                    if (createdAt >= sevenDaysAgo && (data.status === 'DELIVERED' || data.status === 'COMPLETED')) {
+                        earnings += data.estimatedEarnings || 0;
+                        trips += 1;
+                    }
+                });
+                setOrders(list);
+                setWeeklySummary({ earnings, trips, hours: 0 });
+            });
+
+        const unsubTx = firestore()
+            .collection(COLLECTIONS.WALLET_TRANSACTIONS)
+            .where('driverId', '==', uid)
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .onSnapshot((snap) => {
+                const txs: any[] = [];
+                snap.forEach((d) => {
+                    const data: any = d.data();
+                    txs.push({
+                        id: d.id,
+                        type: data.type,
+                        description: data.description || data.type,
+                        amount: data.amount || 0,
+                        date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : '',
+                    });
+                });
+                setTransactions(txs);
+            });
+
+        return () => { unsubDriver(); unsubOrders(); unsubTx(); };
     }, []);
-    
-    const declineOrder = useCallback((orderId: string) => {
+
+    const toggleOnlineStatus = useCallback(async () => {
+        const uid = auth().currentUser?.uid;
+        if (!uid) return;
+        await firestore().collection(COLLECTIONS.DRIVERS).doc(uid).set({
+            operational: { isOnline: !driver.operational.isOnline }
+        }, { merge: true });
+    }, [driver.operational.isOnline]);
+
+    const declineOrder = useCallback(async (orderId: string) => {
+        // Solo elimina de la vista, no modifica en servidor
         setOrders(prev => prev.filter(o => o.id !== orderId));
     }, []);
 
@@ -232,8 +320,8 @@ export const useMockData = () => {
         orders,
         weeklySummary,
         incentives: initialIncentives,
-        transactions: initialTransactions,
-        payments: initialPayments,
+        transactions, // Datos en vivo desde Firestore
+        payments: [], // Removido mock: se mostrará vacío hasta implementar fuente real
         toggleOnlineStatus,
         declineOrder,
         getOrderById,

@@ -14,7 +14,7 @@ export { default as SettingsScreen } from './SettingsScreen';
 export { default as DocumentsScreen } from './DocumentsScreen';
 export { default as DeliveryConfirmationScreen } from './DeliveryConfirmationScreen';
 export { default as IncidentsScreen } from './IncidentsScreen';
-export { default as ChatScreen } from './ChatScreen';
+
 export { default as MetricsScreen } from './MetricsScreen';
 export { default as OrderCompletionScreen } from './OrderCompletionScreen';
 export { default as OrderRatingScreen } from './OrderRatingScreen';

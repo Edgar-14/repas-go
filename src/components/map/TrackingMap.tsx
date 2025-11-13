@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
+import { GOOGLE_MAPS_API_KEY } from '../../config/keys';
 import Geolocation from 'react-native-geolocation-service';
 import { firestore } from '../../config/firebase';
 
@@ -164,7 +165,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
           <MapViewDirections
             origin={driverLocation}
             destination={currentDestination}
-            apikey="AIzaSyAEFo3RDFvqw0-HuSOOBD34NGruHI3hIBQ" // Reemplazar con tu API key
+            apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={4}
             strokeColor="#667eea"
             optimizeWaypoints={true}

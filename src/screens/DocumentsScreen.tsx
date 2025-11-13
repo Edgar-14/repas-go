@@ -35,51 +35,33 @@ const DocumentsScreen: React.FC<NavigationProps> = ({ navigation }) => {
   }, []);
 
   const loadDocuments = async () => {
-    // Simular carga de documentos
-    // En la implementación real, esto vendría de Firestore
-    const mockDocuments: Document[] = [
-      {
-        id: '1',
-        name: 'INE/IFE',
-        type: 'identification',
-        status: 'APPROVED',
-        uploadDate: new Date('2024-01-15'),
-        expirationDate: new Date('2029-01-15'),
-      },
-      {
-        id: '2',
-        name: 'Licencia de Conducir',
-        type: 'license',
-        status: 'APPROVED',
-        uploadDate: new Date('2024-01-16'),
-        expirationDate: new Date('2026-01-16'),
-      },
-      {
-        id: '3',
-        name: 'Tarjeta de Circulación',
-        type: 'vehicle_registration',
-        status: 'APPROVED',
-        uploadDate: new Date('2024-01-17'),
-        expirationDate: new Date('2025-12-31'),
-      },
-      {
-        id: '4',
-        name: 'Constancia de Situación Fiscal',
-        type: 'tax_status',
-        status: 'PENDING',
-        uploadDate: new Date('2024-01-18'),
-      },
-      {
-        id: '5',
-        name: 'Comprobante de Domicilio',
-        type: 'address_proof',
-        status: 'EXPIRED',
-        uploadDate: new Date('2023-12-01'),
-        expirationDate: new Date('2024-12-01'),
-      },
-    ];
-    
-    setDocuments(mockDocuments);
+    try {
+      const { auth, firestore } = require('../config/firebase');
+      const uid = auth().currentUser?.uid;
+      if (!uid) { setDocuments([]); return; }
+      const snap = await firestore()
+        .collection('drivers')
+        .doc(uid)
+        .collection('documents')
+        .get();
+      const docs: Document[] = snap.docs.map((d: any) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name || data.type || 'Documento',
+          type: data.type || 'unknown',
+          status: data.status || 'PENDING',
+          uploadDate: data.uploadDate?.toDate ? data.uploadDate.toDate() : new Date(),
+          expirationDate: data.expirationDate?.toDate ? data.expirationDate.toDate() : undefined,
+          rejectionReason: data.rejectionReason,
+          url: data.url,
+        };
+      });
+      setDocuments(docs);
+    } catch (e) {
+      console.error('Error loading documents:', e);
+      setDocuments([]);
+    }
   };
 
   const onRefresh = async () => {

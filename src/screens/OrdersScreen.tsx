@@ -11,38 +11,49 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
-import { listenForAvailableOrders, fetchOrderHistory } from '../store/slices/ordersSlice';
-import { NavigationProps, Order, OrderStatus } from '../types';
+import { loadOrders, fetchOrderHistory } from '../store/slices/ordersSlice';
+import { Order, OrderStatus } from '../types';
+import { firestore, COLLECTIONS } from '../config/firebase';
 
-const OrdersScreen: React.FC<NavigationProps> = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState<'available' | 'history'>('available');
+interface NavigationProps {
+  navigation: any;
+  route?: any;
+}
+
+const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
+  const initialTab = route?.params?.initialTab || 'available';
+  const [activeTab, setActiveTab] = useState<'available' | 'history'>(initialTab);
   const [refreshing, setRefreshing] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
   const orders = useSelector((state: RootState) => state.orders);
   const driver = useSelector((state: RootState) => state.driver);
-  const { availableOrders, orderHistory, activeOrder } = orders as any;
-  const { isOnline } = driver as any;
+  
+  const availableOrders = orders.availableOrders || [];
+  const assignedOrders = orders.assignedOrders || [];
+  const orderHistory = orders.orderHistory || [];
+  const activeOrder = orders.activeOrder;
+  const isOnline = driver.isOnline;
 
   useEffect(() => {
-    if (user?.uid) {
-      if (isOnline && activeTab === 'available') {
-        dispatch(listenForAvailableOrders(user.uid));
-      }
-      if (activeTab === 'history') {
-        dispatch(fetchOrderHistory(user.uid));
-      }
+    if (!user?.uid) return;
+
+    if (activeTab === 'available') {
+      // Cargar pedidos usando Cloud Function
+      dispatch(loadOrders());
+    } else if (activeTab === 'history') {
+      dispatch(fetchOrderHistory(user.uid));
     }
-  }, [dispatch, user?.uid, isOnline, activeTab]);
+  }, [dispatch, user?.uid, activeTab]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     if (user?.uid) {
-      if (activeTab === 'available' && isOnline) {
-        dispatch(listenForAvailableOrders(user.uid));
+      if (activeTab === 'available') {
+        await dispatch(loadOrders());
       } else if (activeTab === 'history') {
-        dispatch(fetchOrderHistory(user.uid));
+        await dispatch(fetchOrderHistory(user.uid));
       }
     }
     setRefreshing(false);
@@ -51,75 +62,68 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING: return '#9E9E9E';
-      case OrderStatus.SEARCHING: return '#FFC107';
-      case OrderStatus.ASSIGNED: return '#2196F3';
       case OrderStatus.ACCEPTED: return '#3F51B5';
       case OrderStatus.PICKED_UP: return '#FF9800';
-      case OrderStatus.IN_TRANSIT: return '#FF5722';
       case OrderStatus.ARRIVED: return '#8BC34A';
       case OrderStatus.DELIVERED: return '#4CAF50';
       case OrderStatus.COMPLETED: return '#2E7D32';
-      case OrderStatus.FAILED: return '#F44336';
-      case OrderStatus.CANCELLED: return '#616161';
-      default: return '#9E9E9E';
+      default: return '#616161';
     }
   };
 
   const getStatusText = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING: return 'Pendiente';
-      case OrderStatus.SEARCHING: return 'Buscando repartidor';
-      case OrderStatus.ASSIGNED: return 'Asignado';
       case OrderStatus.ACCEPTED: return 'Aceptado';
       case OrderStatus.PICKED_UP: return 'Recogido';
-      case OrderStatus.IN_TRANSIT: return 'En camino';
       case OrderStatus.ARRIVED: return 'Llegó al destino';
       case OrderStatus.DELIVERED: return 'Entregado';
       case OrderStatus.COMPLETED: return 'Completado';
-      case OrderStatus.FAILED: return 'Fallido';
-      case OrderStatus.CANCELLED: return 'Cancelado';
-      default: return status;
+      case 'SEARCHING' as any: return 'Buscando';
+      case 'CANCELLED' as any: return 'Cancelado';
+      case 'FAILED' as any: return 'Fallido';
+      default: return (status as string) || 'Desconocido';
     }
   };
 
-  const renderAvailableOrder = ({ item }: { item: Order }) => (
+  const renderAvailableOrder = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.orderCard}
-      onPress={() => navigation.navigate('OrderDetail', { orderId: item.id })}
+      onPress={() => Alert.alert(
+        `Pedido #${item.id.slice(-6)}`,
+        `${item.pickup?.businessName || 'Tienda'}\n→\n${item.delivery?.address || 'Cliente'}\n\nGanancia: $${item.estimatedEarnings || 0}`
+      )}
     >
       <View style={styles.orderHeader}>
         <View style={styles.orderInfo}>
           <Text style={styles.orderId}>#{item.id.slice(-6)}</Text>
-          <Text style={styles.orderDistance}>{item.distance.toFixed(1)} km</Text>
+          <Text style={styles.orderDistance}>{(item.distance || 0).toFixed(1)} km</Text>
         </View>
         <View style={styles.orderEarnings}>
-          <Text style={styles.earningsAmount}>${item.estimatedEarnings}</Text>
+          <Text style={styles.earningsAmount}>${item.estimatedEarnings || 0}</Text>
           <Text style={styles.earningsLabel}>Ganancia</Text>
         </View>
       </View>
-
       <View style={styles.orderLocations}>
-        <Text style={styles.pickup}>📍 {item.pickup.businessName}</Text>
-        <Text style={styles.delivery}>🏠 {item.delivery.address}</Text>
+        <Text style={styles.pickup}>📍 {item.pickup?.businessName || 'Recogida'}</Text>
+        <Text style={styles.delivery}>🏠 {item.delivery?.address || 'Entrega'}</Text>
       </View>
-
       <View style={styles.orderFooter}>
         <Text style={styles.paymentMethod}>
           {item.paymentMethod === 'CASH' ? '💵 Efectivo' : '💳 Tarjeta'}
         </Text>
-        <Text style={styles.estimatedTime}>⏱️ {item.estimatedTime} min</Text>
+        <Text style={styles.estimatedTime}>⏱️ {item.estimatedTime || '?'} min</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const renderHistoryOrder = ({ item }: { item: Order }) => (
+  const renderHistoryOrder = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.historyCard}
       onPress={() => {
-        // Mostrar detalles del pedido histórico
         Alert.alert(
           `Pedido #${item.id.slice(-6)}`,
-          `Estado: ${getStatusText(item.status)}\nGanancia: $${item.estimatedEarnings}\nFecha: ${new Date(item.createdAt).toLocaleDateString()}`
+          `Estado: ${getStatusText(item.status as OrderStatus)}\nGanancia: $${item.estimatedEarnings || 0}\nFecha: ${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Sin fecha'}`
         );
       }}
     >
@@ -127,20 +131,18 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation }) => {
         <View style={styles.historyInfo}>
           <Text style={styles.historyId}>#{item.id.slice(-6)}</Text>
           <Text style={styles.historyDate}>
-            {new Date(item.createdAt).toLocaleDateString()}
+            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Sin fecha'}
           </Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status as OrderStatus) }]}>
+          <Text style={styles.statusText}>{getStatusText(item.status as OrderStatus)}</Text>
         </View>
       </View>
-
       <Text style={styles.historyAddress}>
-        📍 {item.pickup.businessName} → 🏠 {item.delivery.address}
+        📍 {item.pickup?.businessName || 'Recogida'} → 🏠 {item.delivery?.address || 'Entrega'}
       </Text>
-
       <View style={styles.historyFooter}>
-        <Text style={styles.historyEarnings}>${item.estimatedEarnings}</Text>
+        <Text style={styles.historyEarnings}>${item.estimatedEarnings || 0}</Text>
         <Text style={styles.historyPayment}>
           {item.paymentMethod === 'CASH' ? '💵' : '💳'}
         </Text>
@@ -175,7 +177,6 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Pedido activo (si existe) */}
       {activeOrder && (
         <TouchableOpacity
           style={styles.activeOrderBanner}
@@ -185,19 +186,18 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation }) => {
             🚚 Pedido activo: #{activeOrder.id.slice(-6)}
           </Text>
           <Text style={styles.activeOrderStatus}>
-            {getStatusText(activeOrder.status)}
+            {getStatusText(activeOrder.status as OrderStatus)}
           </Text>
         </TouchableOpacity>
       )}
 
-      {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'available' && styles.activeTab]}
           onPress={() => setActiveTab('available')}
         >
           <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}>
-            Disponibles ({availableOrders.length})
+            Disponibles ({availableOrders.length + assignedOrders.length})
           </Text>
         </TouchableOpacity>
         
@@ -211,9 +211,8 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Lista de pedidos */}
       <FlatList
-        data={activeTab === 'available' ? availableOrders : orderHistory}
+        data={activeTab === 'available' ? [...availableOrders, ...assignedOrders] : orderHistory}
         renderItem={activeTab === 'available' ? renderAvailableOrder : renderHistoryOrder}
         keyExtractor={(item) => item.id}
         refreshControl={
@@ -258,23 +257,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
   },
   activeTab: {
+    borderBottomWidth: 2,
     borderBottomColor: '#FF6B35',
   },
   tabText: {
     fontSize: 16,
-    color: '#666',
-    fontWeight: '600',
+    color: '#666666',
   },
   activeTabText: {
     color: '#FF6B35',
+    fontWeight: 'bold',
   },
   listContainer: {
     padding: 16,
-    flexGrow: 1,
   },
   orderCard: {
     backgroundColor: '#FFFFFF',
@@ -284,8 +281,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -299,36 +296,36 @@ const styles = StyleSheet.create({
   orderId: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2D3748',
   },
   orderDistance: {
     fontSize: 14,
-    color: '#666',
+    color: '#718096',
     marginTop: 2,
   },
   orderEarnings: {
     alignItems: 'flex-end',
   },
   earningsAmount: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: '#00B894',
   },
   earningsLabel: {
     fontSize: 12,
-    color: '#666',
+    color: '#718096',
   },
   orderLocations: {
     marginBottom: 12,
   },
   pickup: {
     fontSize: 14,
-    color: '#333',
+    color: '#2D3748',
     marginBottom: 4,
   },
   delivery: {
     fontSize: 14,
-    color: '#333',
+    color: '#2D3748',
   },
   orderFooter: {
     flexDirection: 'row',
@@ -337,11 +334,11 @@ const styles = StyleSheet.create({
   },
   paymentMethod: {
     fontSize: 14,
-    color: '#666',
+    color: '#718096',
   },
   estimatedTime: {
     fontSize: 14,
-    color: '#666',
+    color: '#718096',
   },
   historyCard: {
     backgroundColor: '#FFFFFF',
@@ -349,10 +346,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   historyHeader: {
     flexDirection: 'row',
@@ -366,11 +363,11 @@ const styles = StyleSheet.create({
   historyId: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2D3748',
   },
   historyDate: {
     fontSize: 12,
-    color: '#666',
+    color: '#718096',
     marginTop: 2,
   },
   statusBadge: {
@@ -381,11 +378,11 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   historyAddress: {
     fontSize: 14,
-    color: '#333',
+    color: '#2D3748',
     marginBottom: 8,
   },
   historyFooter: {
@@ -396,7 +393,7 @@ const styles = StyleSheet.create({
   historyEarnings: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: '#00B894',
   },
   historyPayment: {
     fontSize: 16,
@@ -414,14 +411,15 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#2D3748',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: '#718096',
     textAlign: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 32,
   },
 });
 

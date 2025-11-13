@@ -4,7 +4,8 @@ import { useNavigation, RouteProp, useRoute } from '@react-navigation/native';
 import { Order, RootStackParamList } from '../types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../hooks';
+import { useDispatch } from 'react-redux';
+import { setActiveOrder } from '../store/slices/ordersSlice';
 
 type OrderRatingScreenNavigationProp = StackNavigationProp<RootStackParamList, 'OrderRating'>;
 type OrderRatingScreenRouteProp = RouteProp<RootStackParamList, 'OrderRating'>;
@@ -13,7 +14,7 @@ const OrderRatingScreen: React.FC = () => {
     const navigation = useNavigation<OrderRatingScreenNavigationProp>();
     const route = useRoute<OrderRatingScreenRouteProp>();
     const { order } = route.params;
-    const { setActiveOrder } = useAuth();
+    const dispatch = useDispatch();
     
     if (!order) {
         return (
@@ -30,7 +31,7 @@ const OrderRatingScreen: React.FC = () => {
     }
     
     const handleBackToDashboard = () => {
-        setActiveOrder(null);
+        dispatch(setActiveOrder(null));
         navigation.navigate('Dashboard');
     }
 

@@ -2,6 +2,7 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: "com.google.gms.google-services"
+apply plugin: "com.google.android.libraries.mapsplatform.secrets-gradle-plugin"
 
 // Exclude legacy Android support libraries to avoid duplicate classes with AndroidX
 configurations.all {
@@ -92,8 +93,11 @@ android {
         versionName "1.0"
         manifestPlaceholders = [
             usesCleartextTraffic: true,
-            MAPS_API_KEY: (project.findProperty("MAPS_API_KEY") ?: "")
+            MAPS_API_KEY: (project.findProperty("MAPS_API_KEY") ?: "AIzaSyAEFo3RDFvqw0-HuSOOBD34NGruHI3hIBQ")
         ]
+        multiDexEnabled true
+        // Limitar recursos de idiomas durante desarrollo
+        resConfigs "es"
     }
     signingConfigs {
         debug {
@@ -115,19 +119,36 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-    // Google Play Services for Maps
+    // Google Maps SDK (compatible version with react-native-maps)
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
+    
+    // Location services (keep if needed for geolocation)
     implementation 'com.google.android.gms:play-services-location:21.0.1'
+
+    // Desugaring library for Java 8+ APIs
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.0.3'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
+}
+
+secrets {
+    // Use local secrets file; falls back to defaults if missing
+    propertiesFileName = "secrets.properties"
+    defaultPropertiesFileName = "local.defaults.properties"
 }
