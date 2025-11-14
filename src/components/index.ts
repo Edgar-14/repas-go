@@ -1,11 +1,11 @@
 // Exportar todos los componentes
 
-// Chat Components
-export { default as CustomerChat } from './chat/CustomerChat';
-export { default as DriverChatModal } from './chat/DriverChatModal';
+// Chat Components (eliminados temporalmente hasta que existan implementaciones)
+// export { default as CustomerChat } from './chat/CustomerChat';
+// export { default as DriverChatModal } from './chat/DriverChatModal';
 
-// Chatbot Components
-export { default as Chatbot } from './chatbot/Chatbot';
+// Chatbot Components (si el archivo no existe, comentar)
+// export { default as Chatbot } from './chatbot/Chatbot';
 
 // Incentives Components
 export { default as IncentivesCard } from './incentives/IncentivesCard';
@@ -14,12 +14,10 @@ export { default as IncentivesCard } from './incentives/IncentivesCard';
 export { default as TrackingMap } from './map/TrackingMap';
 
 // Modal Components
-// export { default as EmergencyModal } from './modals/EmergencyModal';
-// export { default as EmergencyOptionsModal } from './modals/EmergencyOptionsModal';
 export { default as NewOrderModal } from './modals/NewOrderModal';
 
 // UI Components
-export { default as FloatingButtons } from './ui/FloatingButtons';
+// export { default as FloatingButtons } from './ui/FloatingButtons';
 export { default as MobileShell } from './ui/MobileShell';
 export { default as NotificationContainer } from './ui/NotificationContainer';
 export { default as OrderStatusTimeline } from './ui/OrderStatusTimeline';

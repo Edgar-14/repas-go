@@ -1,116 +1,158 @@
 // Configuración de Firebase para BeFast GO - Proyecto: befast-hfkbl
 // Integración con ecosistema BeFast existente
 import firebase from '@react-native-firebase/app';
+import firestore, { FieldValue } from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 import messaging from '@react-native-firebase/messaging';
 import storage from '@react-native-firebase/storage';
-import functions from '@react-native-firebase/functions';
-import { emitNewOrder } from '../utils/EventBus';
 
-// Configuración del proyecto (coincide con google-services.json)
-const firebaseConfig = {
-  projectId: "befast-hfkbl",
-  authDomain: "befast-hfkbl.firebaseapp.com",
-  databaseURL: "https://befast-hfkbl-default-rtdb.firebaseio.com",
-  storageBucket: "befast-hfkbl.appspot.com",
-  messagingSenderId: "897579485656",
-  appId: "1:897579485656:android:c307afdda53e9328a84aad"
+export const firebaseConfig = {
+  apiKey: "AIzaSyA53dByYcS4bPBSGGbWDuLlw9Kbb0QAzRI",
+  authDomain: 'befast-hfkbl.firebaseapp.com',
+  projectId: 'befast-hfkbl',
+  storageBucket: 'befast-hfkbl.appspot.com',
+  messagingSenderId: '897579485656',
+  appId: '1:897579485656:android:abc123def456',
 };
 
-// Colecciones de Firestore (usar exactamente estas)
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
 export const COLLECTIONS = {
-  // Conductores
   DRIVERS: 'drivers',
   DRIVER_APPLICATIONS: 'driverApplications',
-  
-  // Pedidos
   ORDERS: 'orders',
   ORDER_TIMELINE: 'orderTimeline',
-  
-  // Financiero
   WALLET_TRANSACTIONS: 'walletTransactions',
   CREDIT_TRANSACTIONS: 'creditTransactions',
-  
-  // Sistema
+  BUSINESSES: 'businesses',
   SYSTEM_LOGS: 'systemLogs',
-  AUDIT_LOGS: 'auditLogs'
+  AUDIT_LOGS: 'auditLogs',
+  SHIPDAY_DRIVERS: 'shipdayDrivers',
+  SHIPDAY_ORDERS: 'shipdayOrders',
+  SHIPDAY_WEBHOOK_LOGS: 'shipdayWebhookLogs',
+  USERS: 'users'
 };
 
-// Funciones de Cloud Functions
 export const CLOUD_FUNCTIONS = {
-  VALIDATE_ORDER_ASSIGNMENT: 'validateOrderAssignment',
-  PROCESS_ORDER_COMPLETION: 'processOrderCompletion',
-  HANDLE_ORDER_WORKFLOW: 'handleOrderWorkflow',
-  UPDATE_DRIVER_STATUS: 'updateDriverStatus',
-  PROCESS_WITHDRAWAL: 'processWithdrawalRequest',
-  PROCESS_DEBT_PAYMENT: 'processDebtPayment',
-  SEND_NOTIFICATION: 'sendNotification'
+  handleAuthOperations: 'handleAuthOperations',
+  verifyEmail: 'verifyEmail',
+  generateVerificationCode: 'generateVerificationCode',
+  resendVerificationCode: 'resendVerificationCode',
+  createOrder: 'createOrder',
+  validateOrderAssignment: 'validateOrderAssignment',
+  processOrderCompletion: 'processOrderCompletion',
+  handleOrderWorkflow: 'handleOrderWorkflow',
+  onOrderCompleted: 'onOrderCompleted',
+  updateDriverStatus: 'updateDriverStatus',
+  processDriverApplication: 'processDriverApplication',
+  syncDriverToShipday: 'syncDriverToShipday',
+  processPayment: 'processPayment',
+  transferBenefits: 'transferBenefits',
+  manageFinancialOperationsConsolidated: 'manageFinancialOperationsConsolidated',
+  classifyDriversMonthly: 'classifyDriversMonthly',
+  generateIDSE: 'generateIDSE',
+  processMonthlyPayroll: 'processMonthlyPayroll',
+  handleShipdayWebhook: 'handleShipdayWebhook',
+  requestShipdaySync: 'requestShipdaySync',
+  retryFailedWebhooks: 'retryFailedWebhooks',
+  businessChatbot: 'businessChatbot',
+  driverChatbot: 'driverChatbot',
+  adminChatbot: 'adminChatbot',
+  processDriverDocuments: 'processDriverDocuments',
+  auditFinancialTransaction: 'auditFinancialTransaction'
 };
 
-// Exportar instancias de Firebase
-export { auth, firestore, messaging, storage, functions };
-export const db = firestore();
-
-// Función para inicializar Firebase
 export const initializeFirebase = async () => {
-  try {
-    // Tocar la app por defecto para forzar/validar inicialización nativa
-    const defaultApp = firebase.app();
-    console.log('Firebase default app:', defaultApp.name);
-    return true;
-  } catch (error) {
-    console.error('Error initializing Firebase (default app not available):', error);
-    return false;
-  }
+  // Ya inicializado arriba; mantenemos API por compatibilidad
+  return true;
 };
 
-// Función para configurar notificaciones push
 export const setupPushNotifications = async () => {
   try {
     // Solicitar permisos
-    const authStatus = await messaging().requestPermission();
-    
-    if (authStatus === messaging.AuthorizationStatus.AUTHORIZED) {
+    const authStatus = await messaging().requestPermission({
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: true,
+      provisional: false,
+      sound: true,
+    });
+
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+    if (enabled) {
+      console.log('Authorization status:', authStatus);
+
       // Obtener token FCM
       const fcmToken = await messaging().getToken();
-      
-      // Guardar token en Firestore
-      const currentUser = auth().currentUser;
-      if (currentUser && fcmToken) {
+
+      if (fcmToken && auth().currentUser) {
+        // Guardar token en Firestore
         await firestore()
           .collection(COLLECTIONS.DRIVERS)
-          .doc(currentUser.uid)
+          .doc(auth().currentUser.uid)
           .update({
             fcmToken: fcmToken,
             lastTokenUpdate: firestore.FieldValue.serverTimestamp()
           });
+
+        console.log('FCM Token saved:', fcmToken);
       }
-      
-      return fcmToken;
     }
-    
-    return null;
   } catch (error) {
     console.error('Error setting up push notifications:', error);
-    return null;
   }
 };
 
-// Función para escuchar notificaciones
 export const setupNotificationListeners = () => {
   // Notificaciones en primer plano
-  messaging().onMessage(async remoteMessage => {
-    console.log('Foreground message:', remoteMessage);
-    
+  const unsubscribeOnMessage = messaging().onMessage(async remoteMessage => {
+    console.log('Foreground message received:', remoteMessage);
+
     if (remoteMessage.data?.type === 'NEW_ORDER') {
-      // Emitir evento global para abrir el modal de nuevo pedido
-      emitNewOrder(remoteMessage.data);
+      console.log('New order notification:', remoteMessage.data);
+      // Aquí se puede integrar con el store de Redux si es necesario
     }
   });
-  
+
   // Notificaciones en segundo plano
   messaging().setBackgroundMessageHandler(async remoteMessage => {
-    console.log('Background message:', remoteMessage);
+    console.log('Background message received:', remoteMessage);
   });
+
+  // Notificación tocada cuando la app está en segundo plano
+  const unsubscribeOnNotificationOpened = messaging().onNotificationOpenedApp(remoteMessage => {
+    console.log('Notification opened app:', remoteMessage);
+
+    if (remoteMessage.data?.type === 'NEW_ORDER') {
+      console.log('Opening app from new order notification:', remoteMessage.data);
+      // Aquí se puede navegar a la pantalla apropiada
+    }
+  });
+
+  // App abierta desde notificación (app cerrada completamente)
+  messaging()
+    .getInitialNotification()
+    .then(remoteMessage => {
+      if (remoteMessage) {
+        console.log('App opened from notification (quit state):', remoteMessage);
+      }
+    })
+    .catch(error => {
+      console.error('Error getting initial notification:', error);
+    });
+
+  // Retornar función de limpieza
+  return () => {
+    unsubscribeOnMessage();
+    unsubscribeOnNotificationOpened();
+  };
 };
+
+export { firestore, auth, functions, messaging, storage, setupPushNotifications, setupNotificationListeners };

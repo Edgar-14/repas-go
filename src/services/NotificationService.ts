@@ -1,66 +1,66 @@
 import messaging from '@react-native-firebase/messaging';
 import { store } from '../store';
 import { showNewOrderModal } from '../store/slices/notificationsSlice';
-
-class NotificationService {
-  async initialize() {
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import { COLLECTIONS } from '../config/firebase';
     // Request permission
     const authStatus = await messaging().requestPermission();
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+  private authUnsubscribe: (() => void) | null = null;
+
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    try {
+      const authStatus = await messaging().requestPermission({
+        alert: true, badge: true, sound: true
+      });
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    const enabled =
+      if (!enabled) {
+        console.warn('Notificaciones no autorizadas por el usuario');
+        return;
+      }
 
-    if (enabled) {
-      console.log('Authorization status:', authStatus);
-      await this.setupListeners();
-    }
-  }
-
-  async setupListeners() {
-    // Foreground messages
-    messaging().onMessage(async remoteMessage => {
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
       console.log('Foreground message:', remoteMessage);
+      this.subscribeAuthTokenSync();
+    } catch (e) {
+      console.error('Error inicializando notificaciones:', e);
       this.handleNewOrderNotification(remoteMessage);
     });
 
-    // Background/Quit state messages
-    messaging().setBackgroundMessageHandler(async remoteMessage => {
-      console.log('Background message:', remoteMessage);
-      this.handleNewOrderNotification(remoteMessage);
+  private subscribeAuthTokenSync() {
+    // Mantener token actualizado en Firestore cuando hay usuario
+    this.authUnsubscribe = auth().onAuthStateChanged(async user => {
+      if (!user) return;
+      try {
+        const token = await messaging().getToken();
+        if (!token) return;
+        await firestore()
+          .collection(COLLECTIONS.DRIVERS)
+          .doc(user.uid)
+          .set({
+            fcmToken: token,
+            lastTokenUpdate: firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        console.log('FCM token sincronizado para usuario', user.uid);
+      } catch (err) {
+        console.warn('Error sincronizando token FCM:', err);
+      }
+    });
+  }
+    if (enabled) {
     });
 
     // App opened from notification
     messaging().onNotificationOpenedApp(remoteMessage => {
-      console.log('Notification opened app:', remoteMessage);
-      this.handleNewOrderNotification(remoteMessage);
-    });
 
     // Check if app was opened from a notification (killed state)
     const initialNotification = await messaging().getInitialNotification();
     if (initialNotification) {
       console.log('Initial notification:', initialNotification);
       this.handleNewOrderNotification(initialNotification);
-    }
-  }
-
-  handleNewOrderNotification(remoteMessage: any) {
-    const { data } = remoteMessage;
-    
-    if (data?.type === 'NEW_ORDER' && data?.orderId) {
-      // Show NewOrderModal with order data
-      store.dispatch(showNewOrderModal({
-        id: data.orderId,
-        storeName: data.storeName || 'Restaurante',
-        pickupAddress: data.pickupAddress || '--',
-        deliveryAddress: data.deliveryAddress || '--',
-        total: parseFloat(data.total || '0'),
-        paymentMethod: data.paymentMethod || 'TARJETA',
-        distanceKm: parseFloat(data.distanceKm || '0'),
-        deliveryFee: parseFloat(data.deliveryFee || '0'),
-        tip: parseFloat(data.tip || '0'),
-      }));
-    }
-  }
 
   async getToken() {
     try {
@@ -70,7 +70,7 @@ class NotificationService {
     } catch (error) {
       console.error('Error getting FCM token:', error);
       return null;
-    }
+    // Check killed state
   }
 }
 

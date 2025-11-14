@@ -1,10 +1,15 @@
 // Componente de mapa en tiempo real para tracking de pedidos
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, {
+  Marker,
+  Polyline,
+  PROVIDER_GOOGLE,
+  Region,
+  Heatmap,
+} from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { GOOGLE_MAPS_API_KEY } from '../../config/keys';
-import Geolocation from 'react-native-geolocation-service';
 import { firestore } from '../../config/firebase';
 
 interface Location {
@@ -12,36 +17,89 @@ interface Location {
   longitude: number;
 }
 
+interface ExtraMarker extends Location {
+  title?: string;
+  description?: string;
+  color?: string;
+}
+
+interface HeatPoint {
+  latitude: number;
+  longitude: number;
+  weight?: number;
+}
+
 interface TrackingMapProps {
-  orderId: string;
+  style?: any; // <-- Permite pasar un estilo (ej. flex: 1)
+  orderId?: string;
   pickupLocation?: Location;
-  deliveryLocation: Location;
+  deliveryLocation?: Location;
   driverId?: string | null;
   showRoute?: boolean;
   isPickupPhase?: boolean;
+
+  // Props de IA
+  customStyle?: any[];
+  cameraTarget?: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta?: number;
+    longitudeDelta?: number;
+  } | null;
+  customRoute?: { origin: string | Location; destination: string | Location } | null;
+  searchResults?: Array<{
+    latitude: number;
+    longitude: number;
+    title: string;
+    description?: string;
+  }>;
+
+  onRouteReady?: (data: { distanceKm: number; durationMin: number }) => void;
+  showUserLocation?: boolean;
+  heatmapPoints?: HeatPoint[];
 }
 
+const DEFAULT_LOCATION = {
+  latitude: 19.2499, // Default a Colima, México
+  longitude: -103.7271,
+  latitudeDelta: 0.5,
+  longitudeDelta: 0.5,
+};
+
 const TrackingMap: React.FC<TrackingMapProps> = ({
+  style, // <-- Recibir el estilo
   orderId,
   pickupLocation,
   deliveryLocation,
   driverId,
   showRoute = true,
   isPickupPhase = false,
+  customStyle,
+  cameraTarget,
+  customRoute,
+  searchResults = [],
+  onRouteReady,
+  showUserLocation = false,
+  heatmapPoints = [],
 }) => {
   const mapRef = useRef<MapView>(null);
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
-  const [region, setRegion] = useState<Region | null>(null);
 
-  // Obtener ubicación del conductor en tiempo real
+  // Determinar el origen y destino actual para la ruta principal
+  const currentOrigin: Location | null = driverLocation || pickupLocation || null;
+  const currentDestination: Location | null = deliveryLocation || null;
+
+  // --- EFECTOS ---
+
+  // 1. Obtener ubicación del conductor en tiempo real
   useEffect(() => {
     if (!driverId) {
       setLoading(false);
       return;
     }
 
-    // Escuchar cambios en la ubicación del conductor
+    setLoading(true); // Poner loading al empezar a buscar
     const unsubscribe = firestore()
       .collection('drivers')
       .doc(driverId)
@@ -50,7 +108,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
           if (doc.exists()) {
             const driverData = doc.data();
             const location = driverData?.operational?.currentLocation;
-            
+
             if (location && location.latitude && location.longitude) {
               setDriverLocation({
                 latitude: location.latitude,
@@ -61,7 +119,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
           setLoading(false);
         },
         (error) => {
-          console.error('Error listening to driver location:', error);
+          console.error('[TrackingMap] Error listening to driver location:', error);
           setLoading(false);
         }
       );
@@ -69,142 +127,233 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
     return () => unsubscribe();
   }, [driverId]);
 
-  // Actualizar región del mapa cuando cambian las ubicaciones
+  // 2. Reaccionar a cambios de cámara solicitados por la IA (Alta Prioridad)
   useEffect(() => {
-    if (driverLocation && deliveryLocation) {
-      // Calcular región que incluya ambos puntos
-      const minLat = Math.min(driverLocation.latitude, deliveryLocation.latitude);
-      const maxLat = Math.max(driverLocation.latitude, deliveryLocation.latitude);
-      const minLng = Math.min(driverLocation.longitude, deliveryLocation.longitude);
-      const maxLng = Math.max(driverLocation.longitude, deliveryLocation.longitude);
-
-      const latDelta = (maxLat - minLat) * 1.5; // 1.5x para dar margen
-      const lngDelta = (maxLng - minLng) * 1.5;
-
-      const newRegion = {
-        latitude: (minLat + maxLat) / 2,
-        longitude: (minLng + maxLng) / 2,
-        latitudeDelta: Math.max(latDelta, 0.02), // Mínimo zoom
-        longitudeDelta: Math.max(lngDelta, 0.02),
-      };
-
-      setRegion(newRegion);
-
-      // Animar el mapa a la nueva región
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(newRegion, 1000);
-      }
-    } else if (deliveryLocation) {
-      // Si solo hay destino, centrar en él
-      const newRegion = {
-        latitude: deliveryLocation.latitude,
-        longitude: deliveryLocation.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      };
-      setRegion(newRegion);
+    if (cameraTarget && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: cameraTarget.latitude,
+          longitude: cameraTarget.longitude,
+          latitudeDelta: cameraTarget.latitudeDelta || 0.02,
+          longitudeDelta: cameraTarget.longitudeDelta || 0.02,
+        },
+        1000
+      );
     }
-  }, [driverLocation, deliveryLocation]);
+  }, [cameraTarget]);
 
-  // Obtener destino actual basado en la fase
-  const currentDestination = isPickupPhase && pickupLocation ? pickupLocation : deliveryLocation;
+  // 3. Memoizar los puntos que deben caber en la pantalla
+  const fitPoints = useMemo(() => {
+    const points: Location[] = [];
 
+    if (customRoute) {
+      if (typeof customRoute.origin !== 'string' && customRoute.origin)
+        points.push(customRoute.origin);
+      if (typeof customRoute.destination !== 'string' && customRoute.destination)
+        points.push(customRoute.destination);
+    } else {
+      if (currentOrigin) points.push(currentOrigin);
+      if (currentDestination) points.push(currentDestination);
+    }
+
+    if (searchResults && searchResults.length) {
+      points.push(
+        ...searchResults.map((m) => ({
+          latitude: m.latitude,
+          longitude: m.longitude,
+        }))
+      );
+    }
+
+    return points;
+  }, [currentOrigin, currentDestination, searchResults, customRoute]);
+
+  // 4. Ajustar la cámara del mapa cuando los puntos a mostrar cambien
+  useEffect(() => {
+    if (cameraTarget || !mapRef.current || fitPoints.length === 0) {
+      return;
+    }
+
+    if (fitPoints.length === 1) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: fitPoints[0].latitude,
+          longitude: fitPoints[0].longitude,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        1000
+      );
+    } else if (fitPoints.length > 1) {
+      mapRef.current.fitToCoordinates(fitPoints, {
+        edgePadding: { top: 100, right: 100, bottom: 100, left: 100 },
+        animated: true,
+      });
+    }
+  }, [fitPoints, cameraTarget]);
+
+  // --- MEMOIZACIÓN DE NODOS ---
+  const driverMarkerNode = useMemo(
+    () => (
+      <View style={styles.driverMarker}>
+        <View style={styles.driverMarkerInner}>
+          <Text style={styles.driverMarkerText}>🚗</Text>
+        </View>
+      </View>
+    ),
+    []
+  );
+
+  // --- RENDER ---
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667eea" />
+      <View style={[style, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#00B894" />
         <Text style={styles.loadingText}>Cargando mapa...</Text>
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        style={styles.map}
-        initialRegion={region || {
+  const initialMapRegion =
+    currentDestination
+      ? {
           latitude: currentDestination.latitude,
           longitude: currentDestination.longitude,
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
-        }}
-        showsUserLocation={false}
+        }
+      : DEFAULT_LOCATION;
+
+  return (
+    <View style={[styles.container, style]}>
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_GOOGLE}
+        style={styles.map} // Este estilo debe ser { flex: 1 }
+        initialRegion={initialMapRegion}
+        customMapStyle={customStyle}
+        showsUserLocation={showUserLocation}
         showsMyLocationButton={false}
         showsCompass={true}
         showsTraffic={true}
         loadingEnabled={true}
+        onMapReady={() => {
+          if (!GOOGLE_MAPS_API_KEY) {
+            console.warn(
+              '[TrackingMap] API key de Google Maps vacía. El cálculo de rutas (Directions) fallará.'
+            );
+          }
+        }}
       >
-        {/* Marcador del destino */}
-        <Marker
-          coordinate={currentDestination}
-          title={isPickupPhase ? 'Punto de recogida' : 'Punto de entrega'}
-          description={isPickupPhase ? 'Restaurante' : 'Tu ubicación'}
-          pinColor="#4CAF50"
-        />
-
-        {/* Marcador del conductor (solo si existe) */}
-        {driverLocation && (
+        {/* Marcador del destino (Entrega) */}
+        {currentDestination && (
           <Marker
-            coordinate={driverLocation}
-            title="Repartidor"
-            description="Ubicación en tiempo real"
+            coordinate={currentDestination}
+            title={isPickupPhase && !deliveryLocation ? 'Punto de recogida' : 'Punto de entrega'}
+            description={isPickupPhase && !deliveryLocation ? 'Restaurante' : 'Destino'}
+            pinColor="#4CAF50"
+          />
+        )}
+
+        {/* Marcador del Origen (Conductor o Recogida) */}
+        {currentOrigin && (
+          <Marker
+            coordinate={currentOrigin}
+            title={orderId ? (pickupLocation ? 'Punto de recogida' : 'Repartidor') : 'Mi ubicación'}
+            description={orderId ? (pickupLocation ? 'Origen del pedido' : 'Ubicación en tiempo real') : 'Ubicación actual'}
             anchor={{ x: 0.5, y: 0.5 }}
           >
-            <View style={styles.driverMarker}>
-              <View style={styles.driverMarkerInner}>
-                <Text style={styles.driverMarkerText}>🚗</Text>
-              </View>
-            </View>
+            {driverMarkerNode}
           </Marker>
         )}
 
-        {/* Ruta entre conductor y destino */}
-        {driverLocation && showRoute && (
+        {/* Marcadores de búsqueda de IA */}
+        {searchResults.map((place, index) => (
+          <Marker
+            key={`ai-search-${index}`}
+            coordinate={{
+              latitude: place.latitude,
+              longitude: place.longitude,
+            }}
+            title={place.title}
+            description={place.description}
+            pinColor="#3498db"
+          />
+        ))}
+
+        {/* Ruta principal del pedido (si aplica) */}
+        {showRoute && currentOrigin && currentDestination && GOOGLE_MAPS_API_KEY && (
           <MapViewDirections
-            origin={driverLocation}
+            origin={currentOrigin}
             destination={currentDestination}
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={4}
-            strokeColor="#667eea"
+            strokeColor="#1E90FF"
             optimizeWaypoints={true}
             onReady={(result) => {
-              console.log(`Distance: ${result.distance} km`);
-              console.log(`Duration: ${result.duration} min`);
-              
-              // Ajustar mapa para mostrar toda la ruta
+              if (onRouteReady) {
+                onRouteReady({
+                  distanceKm: result.distance,
+                  durationMin: result.duration,
+                });
+              }
+            }}
+            onError={(error) => {
+              console.error('[TrackingMap] Error calculating main route:', error);
+            }}
+          />
+        )}
+
+        {/* Ruta Personalizada por IA (Directions) */}
+        {customRoute && GOOGLE_MAPS_API_KEY && (
+          <MapViewDirections
+            origin={customRoute.origin}
+            destination={customRoute.destination}
+            apikey={GOOGLE_MAPS_API_KEY}
+            strokeWidth={4}
+            strokeColor="#AA00FF"
+            optimizeWaypoints={true}
+            onReady={(result) => {
               if (mapRef.current && result.coordinates.length > 0) {
                 mapRef.current.fitToCoordinates(result.coordinates, {
-                  edgePadding: {
-                    top: 50,
-                    right: 50,
-                    bottom: 50,
-                    left: 50,
-                  },
+                  edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
                   animated: true,
                 });
               }
             }}
             onError={(error) => {
-              console.error('Error calculating route:', error);
+              console.error('[TrackingMap] Error calculating AI route:', error);
             }}
           />
         )}
 
-        {/* Línea directa si no hay ruta de Google */}
-        {driverLocation && !showRoute && (
+        {/* Línea directa (fallback) si no hay ruta de Google */}
+        {currentOrigin && currentDestination && !showRoute && (
           <Polyline
-            coordinates={[driverLocation, currentDestination]}
+            coordinates={[currentOrigin, currentDestination]}
             strokeColor="#667eea"
             strokeWidth={3}
             lineDashPattern={[10, 5]}
           />
         )}
+
+        {/* Heatmap de puntos de demanda */}
+        {heatmapPoints.length > 0 && (
+          <Heatmap
+            points={heatmapPoints}
+            radius={40}
+            opacity={0.7}
+            gradient={{
+              colors: ['#00B894', '#FFA726', '#EF5350'],
+              startPoints: [0.1, 0.5, 0.9],
+              colorMapSize: 256,
+            }}
+          />
+        )}
       </MapView>
 
       {/* Indicador de actualización en tiempo real */}
-      {driverLocation && (
+      {driverId && driverLocation && (
         <View style={styles.liveIndicator}>
           <View style={styles.liveDot} />
           <Text style={styles.liveText}>En vivo</Text>
@@ -243,7 +392,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#667eea',
+    backgroundColor: '#00B894',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -287,4 +436,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TrackingMap;
+export default React.memo(TrackingMap);

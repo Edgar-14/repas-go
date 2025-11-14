@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, MapViewProps } from 'react-native-maps'; // <-- 1. Importar PROVIDER_GOOGLE
+import MapViewDirections from 'react-native-maps-directions'; // <-- 2. Importar MapViewDirections
+import { GOOGLE_MAPS_API_KEY } from '../config/keys'; // <-- 3. Importar la API Key de JS
 import SimpleIcon from '../components/ui/SimpleIcon';
 
 interface NavigationProps {
@@ -18,18 +20,15 @@ interface NavigationProps {
 }
 
 const GPSNavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
+  const mapRef = useRef<MapView>(null); // <-- 4. Añadir referencia al mapa
   const [currentStep, setCurrentStep] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
   const [estimatedTime, setEstimatedTime] = useState('12 min');
   const [distance, setDistance] = useState('3.2 km');
 
-  // Mock route data
-  const route = [
-    { latitude: 19.4326, longitude: -99.1332 }, // Current location
-    { latitude: 19.4356, longitude: -99.1302 },
-    { latitude: 19.4386, longitude: -99.1272 },
-    { latitude: 19.4416, longitude: -99.1242 }, // Destination
-  ];
+  // Mock route data (ahora solo necesitamos origen y destino)
+  const origin = { latitude: 19.4326, longitude: -99.1332 }; // Current location
+  const destination = { latitude: 19.4416, longitude: -99.1242 }; // Destination
 
   const directions = [
     'Continúa por Av. Insurgentes Sur',
@@ -49,8 +48,8 @@ const GPSNavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
       '¿Estás seguro que deseas finalizar la navegación?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Finalizar', 
+        {
+          text: 'Finalizar',
           onPress: () => {
             setIsNavigating(false);
             navigation?.goBack();
@@ -85,6 +84,8 @@ const GPSNavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
       {/* Map */}
       <View style={styles.mapContainer}>
         <MapView
+          ref={mapRef} // <-- 5. Asignar referencia
+          provider={PROVIDER_GOOGLE} // <-- 6. Asegurar Google Maps
           style={StyleSheet.absoluteFill}
           initialRegion={{
             latitude: 19.4326,
@@ -96,16 +97,35 @@ const GPSNavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
           followsUserLocation
           showsTraffic
         >
-          {/* Route polyline */}
-          <Polyline
-            coordinates={route}
-            strokeColor="#007AFF"
-            strokeWidth={4}
-          />
-          
+          {/* --- 7. REEMPLAZO DE POLYLINE POR RUTA REAL --- */}
+          {GOOGLE_MAPS_API_KEY && (
+            <MapViewDirections
+              origin={origin}
+              destination={destination}
+              apikey={GOOGLE_MAPS_API_KEY}
+              strokeWidth={5}
+              strokeColor="#007AFF"
+              onReady={result => {
+                // Actualizar tiempo y distancia
+                setEstimatedTime(`${Math.round(result.duration)} min`);
+                setDistance(`${result.distance.toFixed(1)} km`);
+
+                // Ajustar mapa a la ruta
+                mapRef.current?.fitToCoordinates(result.coordinates, {
+                  edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+                });
+              }}
+              onError={(error) => {
+                console.error('Error al calcular ruta:', error);
+                Alert.alert('Error', 'No se pudo calcular la ruta. Verifica la API Key de JS.');
+              }}
+            />
+          )}
+          {/* --- FIN DE REEMPLAZO --- */}
+
           {/* Destination marker */}
           <Marker
-            coordinate={route[route.length - 1]}
+            coordinate={destination}
             title="Destino"
             description="Dirección de entrega"
           >
@@ -154,7 +174,7 @@ const GPSNavigationScreen: React.FC<NavigationProps> = ({ navigation }) => {
           <View style={styles.navigationControls}>
             <TouchableOpacity
               style={styles.controlButton}
-              onPress={() => Alert.alert('Recentrar', 'Mapa recentrado en tu ubicación')}
+              onPress={() => mapRef.current?.animateToRegion({ ...origin, latitudeDelta: 0.01, longitudeDelta: 0.01 })}
             >
               <SimpleIcon type="navigation" size={20} color="#007AFF" />
             </TouchableOpacity>

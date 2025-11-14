@@ -1,20 +1,25 @@
+// src/store/slices/notificationsSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+// CORRECCIÓN: Importar el tipo de payload
+import { NewOrderNotificationPayload } from '../../types/index';
 
 interface NotificationsState {
-  newOrderToShow: any | null;
-  globalMessage: string | null;
+// CORRECCIÓN: Usar el tipo específico en lugar de 'any'
+newOrderToShow: NewOrderNotificationPayload | null;
+globalMessage: string | null;
 }
 
 const initialState: NotificationsState = {
-  newOrderToShow: null,
-  globalMessage: null,
+newOrderToShow: null,
+globalMessage: null,
 };
 
 const notificationsSlice = createSlice({
-  name: 'notifications',
-  initialState,
-  reducers: {
-    showNewOrderModal: (state, action: PayloadAction<any>) => {
+name: 'notifications',
+initialState,
+reducers: {
+// CORRECCIÓN: Tipar el payload
+showNewOrderModal: (state, action: PayloadAction<NewOrderNotificationPayload>) => {
       state.newOrderToShow = action.payload;
     },
     hideNewOrderModal: (state) => {

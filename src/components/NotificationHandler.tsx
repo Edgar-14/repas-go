@@ -1,45 +1,24 @@
 import React, { useEffect } from 'react';
-import { auth, firestore, messaging, setupNotificationListeners, COLLECTIONS } from '../config/firebase';
+import { auth, firestore, messaging, COLLECTIONS } from '../config/firebase';
+import { FieldValue } from '@react-native-firebase/firestore';
 
 // Componente global que centraliza handlers de notificaciones y registro de FCM
 const NotificationHandler: React.FC = () => {
   useEffect(() => {
-    // Configurar listeners de mensajes en primer/segundo plano
-    const unsubSetup = setupNotificationListeners();
-
-    // Manejar notificaciones cuando se abre desde background
-    const unsubscribeOpened = messaging().onNotificationOpenedApp(remoteMessage => {
-      // Aquí podrías enrutar basado en remoteMessage.data
-      // p.ej., si es NEW_ORDER, ya se emite EventBus en setupNotificationListeners
-      console.log('Notification opened from background:', remoteMessage?.data);
-    });
-
-    // Manejar notificación que abrió la app desde estado quitado
-    messaging()
-      .getInitialNotification()
-      .then(remoteMessage => {
-        if (remoteMessage) {
-          console.log('App opened by notification (quit state):', remoteMessage?.data);
-        }
-      })
-      .catch(() => {});
-
-    // Mantener token FCM actualizado cuando cambia el usuario
-    const unsubscribeAuth = auth().onAuthStateChanged(async user => {
+    // Actualizar token FCM cuando cambia el usuario
+    const unsubscribeAuth = auth.onAuthStateChanged(async user => {
       try {
         if (user) {
-          const token = await messaging().getToken();
+          const token = await messaging.getToken();
           if (token) {
-            await firestore()
-              .collection(COLLECTIONS.DRIVERS)
-              .doc(user.uid)
-              .set(
-                {
-                  fcmToken: token,
-                  lastTokenUpdate: firestore.FieldValue.serverTimestamp(),
-                } as any,
-                { merge: true }
-              );
+            const driverRef = firestore().collection(COLLECTIONS.DRIVERS).doc(user.uid);
+            await driverRef.set(
+              {
+                fcmToken: token,
+                lastTokenUpdate: FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            );
           }
         }
       } catch (e) {
@@ -48,8 +27,6 @@ const NotificationHandler: React.FC = () => {
     });
 
     return () => {
-      try { (unsubSetup as any)?.(); } catch {}
-      try { unsubscribeOpened(); } catch {}
       try { unsubscribeAuth(); } catch {}
     };
   }, []);

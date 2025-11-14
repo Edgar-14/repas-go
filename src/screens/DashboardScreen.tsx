@@ -1,9 +1,21 @@
 import React, { useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator // Importar ActivityIndicator
+} from 'react-native';
 import SimpleIcon from '../components/ui/SimpleIcon';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store';
+// CORRECCIÓN: Importar AppDispatch
+import { RootState, AppDispatch } from '../store';
 import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
+// CORRECCIÓN: Importar el thunk para actualizar estado
+import { updateDriverStatus } from '../store/slices/driverSlice';
+// CORRECCIÓN: Importar tipos para el useMemo
+import { WalletTransaction, TransactionType } from '../types';
 
 interface NavigationProps {
   navigation?: {
@@ -12,22 +24,40 @@ interface NavigationProps {
 }
 
 const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
-  const dispatch = useDispatch();
-  const driver = useSelector((state: RootState) => (state as any).auth?.driver);
-  const wallet = useSelector((state: RootState) => (state as any).wallet || {});
-  const ordersState = useSelector((state: RootState) => (state as any).orders || {});
+  // CORRECCIÓN: Usar AppDispatch
+  const dispatch = useDispatch<AppDispatch>();
+
+  // CORRECCIÓN: Selectores limpios, sin 'as any'
+  const { driver } = useSelector((state: RootState) => state.auth);
+  const { balance, transactions } = useSelector((state: RootState) => state.wallet);
+  // CORRECCIÓN: Obtener el estado de carga del driverSlice
+  const { isLoading: isDriverLoading } = useSelector((state: RootState) => state.driver);
 
   const isOnline = !!driver?.operational?.isOnline;
-  const balance = Number(wallet?.balance || 0);
-  const transactions = wallet?.transactions || [];
 
   // Cargar datos al montar
   useEffect(() => {
-    const driverId = (driver as any)?.uid;
+    // CORRECCIÓN: Acceso seguro a uid, sin 'as any'
+    const driverId = driver?.uid;
     if (!driverId) return;
-    dispatch(fetchTransactionHistory(driverId) as any);
-    dispatch(listenToWalletBalance(driverId) as any);
+    // CORRECCIÓN: dispatch sin 'as any'
+    dispatch(fetchTransactionHistory(driverId));
+    dispatch(listenToWalletBalance(driverId));
   }, [dispatch, driver]);
+
+  // CORRECCIÓN: Lógica de 'handleToggleOnline' implementada
+  const handleToggleOnline = () => {
+    if (!driver?.uid || isDriverLoading) return;
+
+    const newIsOnline = !isOnline;
+    const newStatus = newIsOnline ? 'ACTIVE' : 'OFFLINE';
+
+    dispatch(updateDriverStatus({
+      driverId: driver.uid,
+      isOnline: newIsOnline,
+      status: newStatus
+    }));
+  };
 
   // Agregados: pedidos y ganancias de hoy, pedidos de la semana
   const { todayOrders, todayEarnings, weekOrders, rating, acceptanceRate } = useMemo(() => {
@@ -40,20 +70,26 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
     let tEarnings = 0;
     let wOrders = 0;
 
-    (transactions || []).forEach((tx: any) => {
+    // CORRECCIÓN: Tipar 'tx' y usar TransactionType
+    (transactions || []).forEach((tx: WalletTransaction) => {
       const ts = tx?.timestamp;
-      const d: Date = tx?.date ? new Date(tx.date) : (ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : new Date()));
-      const type = tx?.type || '';
+      const d: Date = tx?.date
+        ? new Date(tx.date)
+        : (ts && (ts as any).toDate ? (ts as any).toDate() : (ts ? new Date(ts as any) : new Date()));
 
-      // Contamos pedidos como transferencias por pedido con tarjeta
-      if (type === 'CARD_ORDER_TRANSFER') {
+      const type = tx.type;
+
+      // CORRECCIÓN: Contar también pedidos en efectivo (CASH_ORDER_ADEUDO)
+      if (type === TransactionType.CARD_ORDER_TRANSFER || type === TransactionType.CASH_ORDER_ADEUDO) {
         if (d >= startOfDay) tOrders += 1;
         if (d >= startOfWeek) wOrders += 1;
-        if (d >= startOfDay) tEarnings += Number(tx.amount || 0);
       }
-      // Sumamos propinas del día a las ganancias de hoy
-      if (type === 'TIP_CARD_TRANSFER' && d >= startOfDay) {
-        tEarnings += Number(tx.amount || 0);
+
+      // Sumar ganancias de tarjeta y propinas a las ganancias
+      if (type === TransactionType.CARD_ORDER_TRANSFER || type === TransactionType.TIP_CARD_TRANSFER) {
+        if (d >= startOfDay) {
+          tEarnings += Number(tx.amount || 0);
+        }
       }
     });
 
@@ -73,17 +109,27 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <View style={[styles.statusIndicator, isOnline ? styles.online : styles.offline]} />
           </View>
           <TouchableOpacity
-            style={[styles.statusButton, isOnline ? styles.redButton : styles.greenButton]}
-            onPress={() => { /* TODO: integrar toggle real de estado online/offline */ }}
+            // CORRECCIÓN: Implementar onPress y estado de carga
+            style={[
+              styles.statusButton,
+              isOnline ? styles.redButton : styles.greenButton,
+              isDriverLoading && styles.disabledButton
+            ]}
+            onPress={handleToggleOnline}
+            disabled={isDriverLoading}
           >
             <View style={styles.statusButtonContent}>
-              <SimpleIcon 
-                type={isOnline ? 'pause' : 'play'} 
-                size={20} 
-                color="white" 
-              />
+              {isDriverLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <SimpleIcon
+                  type={isOnline ? 'pause' : 'play'}
+                  size={20}
+                  color="white"
+                />
+              )}
               <Text style={styles.statusButtonText}>
-                {isOnline ? 'Desconectarse' : 'Conectarse'}
+                {isDriverLoading ? 'Actualizando...' : (isOnline ? 'Desconectarse' : 'Conectarse')}
               </Text>
             </View>
           </TouchableOpacity>
@@ -127,7 +173,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <Text style={styles.widgetValue}>{rating != null ? `${rating} ⭐` : '—'}</Text>
             <Text style={styles.widgetSubtext}>{rating != null ? 'Actual' : 'Sin datos'}</Text>
           </View>
-          
+
           <View style={[styles.card, styles.widget]}>
             <Text style={styles.widgetTitle}>Aceptación</Text>
             <Text style={styles.widgetValue}>{acceptanceRate != null ? `${acceptanceRate}%` : '—'}</Text>
@@ -141,7 +187,7 @@ const DashboardScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <Text style={styles.widgetValue}>{weekOrders}</Text>
             <Text style={styles.widgetSubtext}>Últimos 7 días</Text>
           </View>
-          
+
           <View style={[styles.card, styles.widget]}>
             <Text style={styles.widgetTitle}>Tiempo Promedio</Text>
             <Text style={styles.widgetValue}>—</Text>
@@ -211,6 +257,9 @@ const styles = StyleSheet.create({
   },
   redButton: { backgroundColor: '#D63031' },
   greenButton: { backgroundColor: '#00B894' },
+  disabledButton: { // <-- CORRECCIÓN: Estilo para botón deshabilitado
+    backgroundColor: '#A0AEC0',
+  },
   statusButtonText: {
     color: 'white',
     fontSize: 16,

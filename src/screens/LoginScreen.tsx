@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, StatusBar, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  Image,
+  ActivityIndicator,
+  Alert // <-- 2. Importar Alert
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../store';
@@ -7,8 +19,16 @@ import { clearError, loginDriver } from '../store/slices/authSlice';
 import { loadOrders } from '../store/slices/ordersSlice';
 import { auth } from '../config/firebase';
 
+// --- 1. MEJORA DE TIPADO ---
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../types'; // Asegúrate que la ruta sea correcta
+
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
+// --- FIN DE MEJORA DE TIPADO ---
+
 const LoginScreen: React.FC = () => {
-  const navigation = useNavigation<any>();
+  // --- 1. USAR EL TIPO CORRECTO ---
+  const navigation = useNavigation<LoginScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,11 +37,10 @@ const LoginScreen: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // Cargar pedidos después del login exitoso
-      dispatch(loadOrders());
-      navigation.navigate('Main');
+      navigation.replace('Main', { screen: 'Maps' }); // Usar replace para que no pueda volver al Login
+      // dispatch(loadOrders()); // opcional
     }
-  }, [isAuthenticated, dispatch]);
+  }, [isAuthenticated, dispatch, navigation]);
 
   const handleLogin = () => {
     dispatch(clearError());
@@ -31,7 +50,7 @@ const LoginScreen: React.FC = () => {
     }
     dispatch(loginDriver({ email: normalizedEmail, password }));
   };
-  
+
   const handleCreateAccount = () => {
     navigation.navigate('Registration');
   };
@@ -40,26 +59,34 @@ const LoginScreen: React.FC = () => {
     dispatch(clearError());
     const normalizedEmail = (email || '').trim().toLowerCase();
     if (!normalizedEmail) {
+      Alert.alert('Correo vacío', 'Por favor, ingresa tu correo electrónico para restablecer la contraseña.');
       return;
     }
     try {
       await auth().sendPasswordResetEmail(normalizedEmail);
+      // --- 2. MEJORA DE UX ---
+      Alert.alert(
+        'Correo enviado',
+        'Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña.'
+      );
+      // --- FIN DE MEJORA DE UX ---
     } catch (e: any) {
-      // Error silencioso
+      // Error silencioso (ya cubierto por el Alert de arriba)
     }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
       >
         <View style={styles.innerContainer}>
             <View style={styles.header}>
                 <View style={styles.logoContainer}>
-                    <Image 
+                    {/* Esta ruta de imagen es inusual, pero la mantengo si así la tienes */}
+                    <Image
                         source={require('../../public/be repartidores.png')}
                         style={styles.logo}
                         resizeMode="contain"
@@ -87,7 +114,7 @@ const LoginScreen: React.FC = () => {
                     placeholderTextColor="#A0AEC0"
                 />
             </View>
-            
+
             {!!error && <Text style={styles.errorText}>{error}</Text>}
 
             <View style={styles.buttonContainer}>
@@ -103,12 +130,12 @@ const LoginScreen: React.FC = () => {
                     )}
                 </TouchableOpacity>
             </View>
-            
+
             <TouchableOpacity style={styles.forgotPasswordButton} onPress={handleForgotPassword}>
                 <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
                 onPress={handleCreateAccount}
                 style={styles.createAccountButton}
             >
@@ -171,6 +198,7 @@ const styles = StyleSheet.create({
     color: '#D63031',
     fontSize: 14,
     marginTop: 8,
+    textAlign: 'center', // Añadido para centrar el error
   },
   buttonContainer: {
     width: '100%',

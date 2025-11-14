@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,12 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Linking, // --- CORRECCIÓN 3: Importar Linking aquí
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigationState } from '@react-navigation/native';
+import { emitMapAction } from '../../utils/EventBus';
+import geminiService from '../../services/geminiService'; // --- CORRECCIÓN 3: Importar servicio aquí
 
 // ============================================================================
 // TIPOS Y CONFIGURACIÓN
@@ -29,7 +32,7 @@ interface ChatMessage {
 
 interface DriverChatWidgetProps {}
 
-// Configuración del asistente (basada en driver.prompt.ts)
+// ... (El resto de la configuración DRIVER_CONFIG y getDriverPromptTemplate no cambia)
 const DRIVER_CONFIG = {
   title: 'BeFast GO 🛵',
   description: 'Tu Aliado en Ruta',
@@ -44,7 +47,6 @@ const DRIVER_CONFIG = {
   ],
 };
 
-// Template del prompt (adaptado de driver.prompt.ts)
 const getDriverPromptTemplate = (userData: Record<string, any>) => `
 ---
 IDENTIDAD Y MISIÓN
@@ -134,31 +136,35 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpeningChat, setIsOpeningChat] = useState(false);
-  
+
   const scrollViewRef = useRef<ScrollView>(null);
   const chatAnimation = useRef(new Animated.Value(0)).current;
 
+  // --- CORRECCIÓN 1: Mover useNavigationState al nivel superior ---
+  const navState = useNavigationState((state: any) => state);
+
   // Detectar si estamos en pantalla de mapa para ajustar posición del botón
-  let isMapScreen = false;
-  try {
-    const navState = useNavigationState((state: any) => state);
-    const getActiveRouteName = (state: any): string | undefined => {
-      if (!state) return undefined;
-      const route = state.routes?.[state.index ?? 0];
-      if (!route) return undefined;
-      if (route.state) return getActiveRouteName(route.state);
-      return route.name;
-    };
-    const activeRouteName = getActiveRouteName(navState);
-    isMapScreen = [
-      'Navigation',
-      'GPSNavigation',
-      'CustomerTracking',
-      'OrderDetail',
-    ].includes(activeRouteName || '');
-  } catch (error) {
-    isMapScreen = false;
-  }
+  const isMapScreen = useMemo(() => {
+    try {
+      const getActiveRouteName = (state: any): string | undefined => {
+        if (!state) return undefined;
+        const route = state.routes?.[state.index ?? 0];
+        if (!route) return undefined;
+        if (route.state) return getActiveRouteName(route.state);
+        return route.name;
+      };
+      const activeRouteName = getActiveRouteName(navState);
+      return [
+        'Navigation',
+        'GPSNavigation',
+        'CustomerTracking',
+        'OrderDetail',
+      ].includes(activeRouteName || '');
+    } catch (error) {
+      // Si navState es undefined (porque no está en un Navigator), esto fallará
+      return false;
+    }
+  }, [navState]); // Recalcular solo cuando el estado de navegación cambie
 
   // ============================================================================
   // FUNCIONES DE ANIMACIÓN Y CONTROL
@@ -167,7 +173,7 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
   const toggleChat = () => {
     if (isOpeningChat) return;
     setIsOpeningChat(true);
-    
+
     if (isChatExpanded) {
       // Cerrar chat
       Animated.timing(chatAnimation, {
@@ -220,20 +226,17 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
     }
   }, [messages, isChatExpanded]);
 
-  // Auto-ocultar el indicador de escritura
-  useEffect(() => {
-    if (isTyping) {
-      const timer = setTimeout(() => setIsTyping(false), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [isTyping]);
+  // --- CORRECCIÓN 2: Eliminar el useEffect de isTyping ---
+  // Esta lógica es redundante y conflictiva. El 'finally' en sendMessage
+  // ya maneja el estado de isTyping correctamente.
 
   // ============================================================================
   // LÓGICA DE ENVÍO DE MENSAJES
   // ============================================================================
 
-  const sendMessage = async () => {
-    const messageText = input.trim();
+  // --- CORRECCIÓN 4: Modificar sendMessage para aceptar el texto ---
+  const sendMessage = async (textToSend: string) => {
+    const messageText = textToSend.trim();
     if (!messageText || isLoading) return;
 
     const userMessageId = `user_${Date.now()}`;
@@ -246,15 +249,24 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInput(''); // Limpiar el input visualmente
     setIsLoading(true);
     setIsTyping(true);
 
     try {
-      // Llamar al servicio de Gemini AI
-      const geminiService = require('../../services/geminiService').default;
+      // (Ya importado en el top)
+      // const geminiService = require('../../services/geminiService').default;
       const prompt = getDriverPromptTemplate(userData);
-      const response = await geminiService.generateResponse(messageText, prompt);
+
+      // Si estamos en pantalla de mapa, activar modo mapas con ubicación base Colima
+      let response: any;
+      if (isMapScreen && geminiService.chatMaps) {
+        response = await geminiService.chatMaps(messageText, {
+          location: { latitude: 19.2433, longitude: -103.7240 } // Colima, MX por defecto
+        });
+      } else {
+        response = await geminiService.generateResponse(messageText, prompt);
+      }
 
       // Actualizar estado del mensaje del usuario
       setMessages(prev =>
@@ -263,7 +275,6 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
         )
       );
 
-      // Procesar respuesta del bot
       let responseContent = 'Lo siento, no pude procesar tu consulta. Intenta de nuevo o contacta a soporte.';
 
       if (response && typeof response === 'string') {
@@ -272,15 +283,35 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
         responseContent = response.response;
       }
 
-      const aiMessage: ChatMessage = {
-        id: `bot_${Date.now()}`,
-        content: responseContent,
+      // Intentar extraer una acción de mapa
+      try {
+        const match = /MAP_ACTION:\s*(\{[\s\S]*\})/m.exec(responseContent);
+        if (match && match[1]) {
+          const payload = JSON.parse(match[1]);
+          emitMapAction(payload);
+        }
+      } catch (err) {
+        // Ignorar parse errors de MAP_ACTION sin romper el chat
+      }
+
+      // --- CORRECCIÓN 5: Dividir la respuesta en múltiples burbujas ---
+      // (Cumpliendo la REGLA DE FORMATO del prompt)
+      const responseBubbles = responseContent
+        .split('\n') // Dividir por saltos de línea
+        .map(line => line.trim())
+        .filter(line => line.length > 0); // Eliminar líneas vacías
+
+      const aiMessages: ChatMessage[] = responseBubbles.map((bubble, index) => ({
+        id: `bot_${Date.now()}_${index}`,
+        content: bubble,
         sender: 'bot',
         timestamp: new Date(),
         status: 'sent',
-      };
+      }));
 
-      setMessages(prev => [...prev, aiMessage]);
+      // Agregar todas las burbujas nuevas al estado
+      setMessages(prev => [...prev, ...aiMessages]);
+
     } catch (error) {
       console.error('Chatbot error:', error);
 
@@ -308,11 +339,12 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    // --- CORRECCIÓN 4: Enviar la sugerencia directamente ---
+    // Poner el texto en el input es solo visual, lo importante
+    // es enviar el texto correcto a la función.
     setInput(suggestion);
-    // Auto-enviar después de un pequeño delay
-    setTimeout(() => {
-      sendMessage();
-    }, 150);
+    sendMessage(suggestion);
+    // No usar setTimeout, eso causa una race condition.
   };
 
   const formatTime = (date: Date) => {
@@ -365,7 +397,7 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
             }
           ]}
         >
-          <KeyboardAvoidingView 
+          <KeyboardAvoidingView
             style={styles.chatContainer}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
@@ -377,9 +409,9 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
                 <Text style={styles.chatHeaderTitle}>{DRIVER_CONFIG.title}</Text>
                 <Text style={styles.chatHeaderSubtitle}>{DRIVER_CONFIG.description}</Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
-                  const { Linking } = require('react-native');
+                  // --- CORRECCIÓN 3: Usar Linking importado ---
                   Linking.openURL('tel:911');
                 }}
                 style={styles.emergencyButton}
@@ -391,9 +423,9 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
                 <Text style={{ fontSize: 20, color: '#FFFFFF' }}>✕</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* Área de Mensajes */}
-            <ScrollView 
+            <ScrollView
               ref={scrollViewRef}
               style={styles.messagesContainer}
               contentContainerStyle={styles.messagesContent}
@@ -478,7 +510,7 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
                 </View>
               )}
             </ScrollView>
-            
+
             {/* Área de Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputWrapper}>
@@ -492,7 +524,8 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
                   maxLength={500}
                   editable={!isLoading}
                   returnKeyType="send"
-                  onSubmitEditing={sendMessage}
+                  // --- CORRECCIÓN 4: Actualizar onSubmitEditing ---
+                  onSubmitEditing={() => sendMessage(input)}
                   blurOnSubmit={false}
                 />
                 {input.length > 0 && (
@@ -505,7 +538,8 @@ const DriverChatWidget: React.FC<DriverChatWidgetProps> = () => {
                   { backgroundColor: DRIVER_CONFIG.primaryColor },
                   (!input.trim() || isLoading) && styles.sendButtonDisabled
                 ]}
-                onPress={sendMessage}
+                // --- CORRECCIÓN 4: Actualizar onPress ---
+                onPress={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
                 activeOpacity={0.7}
               >

@@ -5,6 +5,10 @@ type Handler<T = any> = (payload?: T) => void;
 type Events = {
   NEW_ORDER: any;
   EMERGENCY: void;
+  MAP_ACTION: {
+    intent: 'VIEW_LOCATION' | 'SEARCH_PLACES' | 'DIRECTIONS' | 'CLEAR';
+    params?: any;
+  };
 };
 
 class EventBus {
@@ -35,3 +39,4 @@ const eventBus = new EventBus();
 export default eventBus;
 export const emitNewOrder = (data: any) => eventBus.emit('NEW_ORDER', data);
 export const emitEmergency = () => eventBus.emit('EMERGENCY');
+export const emitMapAction = (payload: { intent: 'VIEW_LOCATION' | 'SEARCH_PLACES' | 'DIRECTIONS' | 'CLEAR'; params?: any; }) => eventBus.emit('MAP_ACTION', payload);

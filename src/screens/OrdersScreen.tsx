@@ -1,4 +1,4 @@
-// Pantalla de lista de pedidos para BeFast GO
+// src/screens/OrdersScreen.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -12,7 +12,8 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { loadOrders, fetchOrderHistory } from '../store/slices/ordersSlice';
-import { Order, OrderStatus } from '../types';
+// CORRECCIÓN: Importar tipos unificados
+import { Order, OrderStatus } from '../types/index';
 import { firestore, COLLECTIONS } from '../config/firebase';
 
 interface NavigationProps {
@@ -29,7 +30,7 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const orders = useSelector((state: RootState) => state.orders);
   const driver = useSelector((state: RootState) => state.driver);
-  
+
   const availableOrders = orders.availableOrders || [];
   const assignedOrders = orders.assignedOrders || [];
   const orderHistory = orders.orderHistory || [];
@@ -40,7 +41,6 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
     if (!user?.uid) return;
 
     if (activeTab === 'available') {
-      // Cargar pedidos usando Cloud Function
       dispatch(loadOrders());
     } else if (activeTab === 'history') {
       dispatch(fetchOrderHistory(user.uid));
@@ -79,19 +79,20 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
       case OrderStatus.ARRIVED: return 'Llegó al destino';
       case OrderStatus.DELIVERED: return 'Entregado';
       case OrderStatus.COMPLETED: return 'Completado';
-      case 'SEARCHING' as any: return 'Buscando';
-      case 'CANCELLED' as any: return 'Cancelado';
-      case 'FAILED' as any: return 'Fallido';
+      case OrderStatus.SEARCHING: return 'Buscando';
+      case OrderStatus.CANCELLED: return 'Cancelado';
+      case OrderStatus.FAILED: return 'Fallido';
       default: return (status as string) || 'Desconocido';
     }
   };
 
-  const renderAvailableOrder = ({ item }: { item: any }) => (
+  // CORRECCIÓN: Tipar 'item' como 'Order'
+  const renderAvailableOrder = ({ item }: { item: Order }) => (
     <TouchableOpacity
       style={styles.orderCard}
       onPress={() => Alert.alert(
         `Pedido #${item.id.slice(-6)}`,
-        `${item.pickup?.businessName || 'Tienda'}\n→\n${item.delivery?.address || 'Cliente'}\n\nGanancia: $${item.estimatedEarnings || 0}`
+        `${item.pickup?.name || 'Tienda'}\n→\n${item.customer?.address || item.customer?.name || 'Cliente'}\n\nGanancia: $${item.earnings || 0}`
       )}
     >
       <View style={styles.orderHeader}>
@@ -100,30 +101,31 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
           <Text style={styles.orderDistance}>{(item.distance || 0).toFixed(1)} km</Text>
         </View>
         <View style={styles.orderEarnings}>
-          <Text style={styles.earningsAmount}>${item.estimatedEarnings || 0}</Text>
+          <Text style={styles.earningsAmount}>${item.earnings || 0}</Text>
           <Text style={styles.earningsLabel}>Ganancia</Text>
         </View>
       </View>
       <View style={styles.orderLocations}>
-        <Text style={styles.pickup}>📍 {item.pickup?.businessName || 'Recogida'}</Text>
-        <Text style={styles.delivery}>🏠 {item.delivery?.address || 'Entrega'}</Text>
+        <Text style={styles.pickup}>📍 {item.pickup?.name || 'Recogida'}</Text>
+        <Text style={styles.delivery}>🏠 {item.customer?.address || item.customer?.name || 'Entrega'}</Text>
       </View>
       <View style={styles.orderFooter}>
         <Text style={styles.paymentMethod}>
-          {item.paymentMethod === 'CASH' ? '💵 Efectivo' : '💳 Tarjeta'}
+          {item.payment.method === 'EFECTIVO' ? '💵 Efectivo' : '💳 Tarjeta'}
         </Text>
         <Text style={styles.estimatedTime}>⏱️ {item.estimatedTime || '?'} min</Text>
       </View>
     </TouchableOpacity>
   );
 
-  const renderHistoryOrder = ({ item }: { item: any }) => (
+  // CORRECCIÓN: Tipar 'item' como 'Order'
+  const renderHistoryOrder = ({ item }: { item: Order }) => (
     <TouchableOpacity
       style={styles.historyCard}
       onPress={() => {
         Alert.alert(
           `Pedido #${item.id.slice(-6)}`,
-          `Estado: ${getStatusText(item.status as OrderStatus)}\nGanancia: $${item.estimatedEarnings || 0}\nFecha: ${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Sin fecha'}`
+          `Estado: ${getStatusText(item.status as OrderStatus)}\nGanancia: $${item.earnings || 0}\nFecha: ${item.timestamps?.created ? new Date(item.timestamps.created).toLocaleDateString() : 'Sin fecha'}`
         );
       }}
     >
@@ -131,7 +133,7 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
         <View style={styles.historyInfo}>
           <Text style={styles.historyId}>#{item.id.slice(-6)}</Text>
           <Text style={styles.historyDate}>
-            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Sin fecha'}
+            {item.timestamps?.created ? new Date(item.timestamps.created).toLocaleDateString() : 'Sin fecha'}
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status as OrderStatus) }]}>
@@ -139,12 +141,12 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
         </View>
       </View>
       <Text style={styles.historyAddress}>
-        📍 {item.pickup?.businessName || 'Recogida'} → 🏠 {item.delivery?.address || 'Entrega'}
+        📍 {item.pickup?.name || 'Recogida'} → 🏠 {item.customer?.name || 'Entrega'}
       </Text>
       <View style={styles.historyFooter}>
-        <Text style={styles.historyEarnings}>${item.estimatedEarnings || 0}</Text>
+        <Text style={styles.historyEarnings}>${item.earnings || 0}</Text>
         <Text style={styles.historyPayment}>
-          {item.paymentMethod === 'CASH' ? '💵' : '💳'}
+          {item.payment.method === 'EFECTIVO' ? '💵' : '💳'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -157,7 +159,7 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
         {!isOnline ? 'Estás desconectado' : 'No hay pedidos disponibles'}
       </Text>
       <Text style={styles.emptySubtitle}>
-        {!isOnline 
+        {!isOnline
           ? 'Conéctate para ver pedidos disponibles'
           : 'Te notificaremos cuando haya nuevos pedidos cerca'
         }
@@ -200,7 +202,7 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
             Disponibles ({availableOrders.length + assignedOrders.length})
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[styles.tab, activeTab === 'history' && styles.activeTab]}
           onPress={() => setActiveTab('history')}
@@ -226,6 +228,7 @@ const OrdersScreen: React.FC<NavigationProps> = ({ navigation, route }) => {
   );
 };
 
+// ... (Estilos permanecen iguales)
 const styles = StyleSheet.create({
   container: {
     flex: 1,

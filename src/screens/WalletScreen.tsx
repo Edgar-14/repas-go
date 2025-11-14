@@ -1,29 +1,45 @@
+// src/screens/WalletScreen.tsx
 import React, { useEffect } from 'react';
-// FIX: Import Platform from react-native.
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
-import { TransactionType } from '../types';
+import { RootStackParamList, TransactionType, WalletTransaction } from '../types/index'; // Importar tipos unificados
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { RootState, AppDispatch } from '../store'; // Importar AppDispatch
 import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
+
+// --- INICIO DE CORRECCIÓN DE ICONOS ---
+// Definir los iconos que faltaban usando MaterialCommunityIcons
+const ArrowLeft = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="arrow-left" size={props.size || 24} color={props.color} />;
+const WalletIcon = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="wallet" size={props.size || 24} color={props.color} />;
+const Wifi = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="wifi" size={props.size || 24} color={props.color} />;
+const Lock = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="lock" size={props.size || 24} color={props.color} />;
+const AlertCircle = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="alert-circle-outline" size={props.size || 24} color={props.color} />;
+const Clock = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="clock-outline" size={props.size || 24} color={props.color} />;
+const ShoppingBag = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="shopping-outline" size={props.size || 24} color={props.color} />;
+const Gift = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="gift-outline" size={props.size || 24} color={props.color} />;
+const ArrowUpCircle = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="arrow-up-circle-outline" size={props.size || 24} color={props.color} />;
+const ArrowDownCircle = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="arrow-down-circle-outline" size={props.size || 24} color={props.color} />;
+const DollarSign = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="currency-usd" size={props.size || 24} color={props.color} />;
+// --- FIN DE CORRECCIÓN DE ICONOS ---
 
 type WalletScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Wallet'>;
 
 const WalletScreen: React.FC = () => {
-    const dispatch = useDispatch();
-    const driver = useSelector((state: RootState) => (state as any).auth?.driver);
-    const { balance, pendingDebts, transactions } = useSelector((state: RootState) => (state as any).wallet || {});
+    // CORRECCIÓN: Usar AppDispatch y RootState
+    const dispatch = useDispatch<AppDispatch>();
+    const driver = useSelector((state: RootState) => state.auth.driver);
+    const { balance, pendingDebts, transactions } = useSelector((state: RootState) => state.wallet);
     const navigation = useNavigation<WalletScreenNavigationProp>();
 
     useEffect(() => {
-        const driverId = (driver as any)?.uid;
+        // CORRECCIÓN: Quitar (driver as any)
+        const driverId = driver?.uid;
         if (!driverId) return;
-        // Escuchar saldo y cargar historial real
-        dispatch(fetchTransactionHistory(driverId) as any);
-        dispatch(listenToWalletBalance(driverId) as any);
+        // CORRECCIÓN: Quitar 'as any' de los dispatch
+        dispatch(fetchTransactionHistory(driverId));
+        dispatch(listenToWalletBalance(driverId));
     }, [dispatch, driver]);
 
     const transactionIcons = {
@@ -32,7 +48,16 @@ const WalletScreen: React.FC = () => {
         [TransactionType.DEBT_PAYMENT]: { icon: ArrowUpCircle, color: '#22C55E' },
         [TransactionType.CASH_ORDER_ADEUDO]: { icon: ArrowDownCircle, color: '#EF4444' },
         [TransactionType.WITHDRAWAL]: { icon: DollarSign, color: '#8B5CF6' },
+        // Añadir fallbacks para otros tipos
+        [TransactionType.ADJUSTMENT]: { icon: DollarSign, color: '#718096' },
+        [TransactionType.BENEFITS_TRANSFER]: { icon: ArrowUpCircle, color: '#22C55E' },
+        [TransactionType.BONUS]: { icon: Gift, color: '#F59E0B' },
+        [TransactionType.PENALTY]: { icon: ArrowDownCircle, color: '#EF4444' },
     };
+
+    const getTransactionIcon = (type: TransactionType) => {
+        return transactionIcons[type] || { icon: DollarSign, color: '#718096' };
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -72,19 +97,24 @@ const WalletScreen: React.FC = () => {
                         <Clock size={20} color="#00B894" />
                     </View>
                 </TouchableOpacity>
-                
+
                 <View style={styles.card}>
                      <Text style={styles.activityTitle}>Actividad Reciente</Text>
-                    {transactions.slice(0, 5).map(tx => {
-                        const { icon: Icon, color } = transactionIcons[tx.type];
-                        const isPositive = tx.type !== TransactionType.CASH_ORDER_ADEUDO && tx.type !== TransactionType.WITHDRAWAL;
+                    {transactions.slice(0, 5).map((tx: WalletTransaction) => {
+                        // CORRECCIÓN: Usar la función getTransactionIcon para evitar crashes
+                        const { icon: Icon, color } = getTransactionIcon(tx.type);
+                        const isPositive = tx.type !== TransactionType.CASH_ORDER_ADEUDO && tx.type !== TransactionType.WITHDRAWAL && tx.type !== TransactionType.PENALTY;
+
+                        // CORRECCIÓN: Manejar timestamp de Firestore o string de fecha
+                        const date = tx.timestamp ? (tx.timestamp as any).toDate ? (tx.timestamp as any).toDate().toLocaleDateString() : new Date(tx.timestamp as any).toLocaleDateString() : tx.date;
+
                         return (
                             <View key={tx.id} style={styles.transactionItem}>
                                 <View style={styles.transactionLeft}>
                                     <Icon color={color} size={24} />
                                     <View style={styles.transactionDetails}>
                                         <Text style={styles.transactionDesc}>{tx.description}</Text>
-                                        <Text style={styles.transactionDate}>{tx.date}</Text>
+                                        <Text style={styles.transactionDate}>{date}</Text>
                                     </View>
                                 </View>
                                 <Text style={[styles.transactionAmount, isPositive ? styles.amountPositive : styles.amountNegative]}>
@@ -100,7 +130,10 @@ const WalletScreen: React.FC = () => {
                 <TouchableOpacity style={[styles.footerButton, styles.secondaryButton]}>
                     <Text style={[styles.footerButtonText, styles.secondaryButtonText]}>Pagar Deuda</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.footerButton, styles.primaryButton]}>
+                <TouchableOpacity
+                    style={[styles.footerButton, styles.primaryButton]}
+                    onPress={() => navigation.navigate('Withdrawal')} // CORRECCIÓN: Navegar a pantalla de retiro
+                >
                     <Text style={[styles.footerButtonText, styles.primaryButtonText]}>Solicitar Retiro</Text>
                 </TouchableOpacity>
             </View>

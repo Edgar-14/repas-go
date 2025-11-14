@@ -1,32 +1,45 @@
+// src/screens/CustomerTrackingScreen.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { Order, OrderStatus, RootStackParamList } from '../types';
+// CORRECCIÓN: Importar tipos unificados
+import { Order, OrderStatus, RootStackParamList } from '../types/index';
 import TrackingMap from '../components/map/TrackingMap';
-import CustomerChat from '../components/chat/CustomerChat';
 import OrderStatusTimeline from '../components/ui/OrderStatusTimeline';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSelector } from 'react-redux';
+// CORRECCIÓN: Importar RootState
 import { RootState } from '../store';
 
+// CORRECCIÓN: Usar el RootStackParamList importado
 type CustomerTrackingScreenRouteProp = RouteProp<RootStackParamList, 'CustomerTracking'>;
 
 const CustomerTrackingScreen: React.FC = () => {
     const route = useRoute<CustomerTrackingScreenRouteProp>();
-    const { id } = route.params;
+    // CORRECCIÓN: Usar .id de forma segura
+    const id = route.params?.id;
     const [order, setOrder] = useState<Order | null>(null);
+
+    // CORRECCIÓN: Usar RootState y no usar 'as any'
     const orderFromStore = useSelector((state: RootState) => {
-        const ordersState = (state as any).orders || {};
-        const pool = [ordersState.activeOrder, ...(ordersState.availableOrders || []), ...(ordersState.orderHistory || [])].filter(Boolean);
-        return pool.find((o: any) => o?.id === id) || null;
+        const ordersState = state.orders; // Acceso tipado
+        const pool = [
+            ordersState.activeOrder, 
+            ...(ordersState.availableOrders || []), 
+            ...(ordersState.orderHistory || [])
+        ].filter(Boolean) as Order[]; // Asegurar que el pool es de tipo Order[]
+        
+        return pool.find((o: Order) => o?.id === id) || null;
     });
 
     useEffect(() => {
         if (id) {
             if (orderFromStore) {
+                // CORRECCIÓN: Tipar 'o'
                 setOrder((o: Order | null) => o ? { ...o, status: orderFromStore.status } : orderFromStore);
             } else {
-                setOrder(null);
+                // Aquí deberías suscribirte a Firestore si no está en Redux
+                setOrder(null); 
             }
         }
     }, [id, orderFromStore]);
@@ -49,9 +62,10 @@ const CustomerTrackingScreen: React.FC = () => {
             
             <View style={styles.mapContainer}>
                 <TrackingMap 
+                    style={styles.map} // <-- CORRECCIÓN
                     orderId={order.id}
                     pickupLocation={order.pickup.location}
-                    deliveryLocation={order.delivery.location}
+                    deliveryLocation={order.delivery?.location} // Delivery puede ser opcional
                     driverId={order.driverId}
                     showRoute={true}
                     isPickupPhase={order.status === OrderStatus.ACCEPTED || order.status === OrderStatus.ASSIGNED}
@@ -70,10 +84,10 @@ const CustomerTrackingScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.divider} />
-                
+
                 <OrderStatusTimeline currentStatus={order.status} />
-                
-                <CustomerChat order={order} />
+
+                {/* <CustomerChat order={order} /> */}
             </ScrollView>
         </SafeAreaView>
     );
@@ -111,6 +125,9 @@ const styles = StyleSheet.create({
     },
     mapContainer: {
         flex: 1,
+    },
+    map: {
+        flex: 1, // <-- CORRECCIÓN
     },
     infoCard: {
         backgroundColor: 'white',

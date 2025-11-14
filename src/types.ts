@@ -2,8 +2,8 @@
 export interface Order {
   id: string;
   distance: number;
-  pickup: { name: string };
-  customer: { name: string };
+  pickup: { name: string; location?: { latitude: number; longitude: number } };
+  customer: { name: string; location?: { latitude: number; longitude: number } };
   earnings: number;
   payment: {
     method: 'TARJETA' | 'EFECTIVO';
@@ -14,6 +14,7 @@ export interface Order {
     created: Date;
   };
   driverId?: string;
+  [key: string]: any; // permitir campos adaptados
 }
 
 // FIX: Expanded Driver type to be compatible with all mock data sources.
@@ -44,13 +45,19 @@ export interface Driver {
 
 // FIX: Added missing OrderStatus enum.
 export enum OrderStatus {
-    PENDING = 'PENDING',
-    ACCEPTED = 'ACCEPTED',
-    PICKED_UP = 'PICKED_UP',
-    EN_ROUTE = 'EN_ROUTE',
-    ARRIVED = 'ARRIVED',
-    DELIVERED = 'DELIVERED',
-    COMPLETED = 'COMPLETED',
+  PENDING = 'PENDING',
+  CREATED = 'CREATED',
+  SEARCHING = 'SEARCHING',
+  ASSIGNED = 'ASSIGNED',
+  ACCEPTED = 'ACCEPTED',
+  STARTED = 'STARTED',
+  PICKED_UP = 'PICKED_UP',
+  IN_TRANSIT = 'IN_TRANSIT',
+  ARRIVED = 'ARRIVED',
+  DELIVERED = 'DELIVERED',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED'
 }
 
 // FIX: Added missing TransactionType enum.

@@ -107,13 +107,14 @@ export const acceptOrder = createAsyncThunk(
 // Thunk para actualizar estado del pedido
 export const updateOrderStatus = createAsyncThunk(
   'orders/updateOrderStatus',
-  async ({ orderId, status, driverId }: { orderId: string; status: OrderStatus; driverId: string }) => {
+  async ({ orderId, status, driverId, reason }: { orderId: string; status: OrderStatus; driverId: string; reason?: string }) => {
     try {
       const result = await functions().httpsCallable(CLOUD_FUNCTIONS.HANDLE_ORDER_WORKFLOW)({
         orderId,
         driverId,
         newStatus: status,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        ...(reason ? { reason } : {})
       });
       
       if ((result.data as any).success) {

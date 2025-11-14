@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, GenerateContentResponse, SchemaType } from "@google/generative-ai";
+import { MapService } from './MapService';
 
 let ai: GoogleGenerativeAI | null = null;
 
@@ -23,9 +24,13 @@ if (apiKeyFromEnv) {
     initializeGeminiService(apiKeyFromEnv);
 }
 
-interface GeminiResponse {
+export interface GeminiResponse {
     text: string;
     groundingChunks: any[];
+    mapAction?: {
+        type: 'STYLE' | 'CAMERA' | 'ROUTE' | 'SEARCH';
+        payload: any;
+    };
 }
 
 export const getGeminiChatResponse = async (
@@ -40,84 +45,87 @@ export const getGeminiChatResponse = async (
     }
     try {
         const modelName = useThinkingMode ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
-
-        const config: any = {};
-        const tools: any[] = [];
-        let toolConfig: any = {};
-
-        if (useThinkingMode) {
-            config.thinkingConfig = { thinkingBudget: 32768 };
-        }
+        
+        const tools: any[] = [...MapService.toolsDefinition.functionDeclarations];
         
         if (useMaps) {
-            tools.push({ googleMaps: {} });
-            toolConfig.retrievalConfig = {
-                latLng: location || {
-                    latitude: 19.4326,
-                    longitude: -99.1332
-                }
-            };
+             // En el futuro, podrías añadir herramientas específicas de mapas aquí si las separas
         }
 
-        const model = ai.getGenerativeModel({ model: modelName });
-        const response = await model.generateContent({
-            contents: [...history, { role: 'user', parts: [{ text: prompt }] }],
-            ...(Object.keys(config).length > 0 && { generationConfig: config }),
-            ...(tools.length > 0 && { tools }),
-            ...(Object.keys(toolConfig).length > 0 && { toolConfig }),
+        const model = ai.getGenerativeModel({ 
+            model: modelName,
+            tools: [{ functionDeclarations: tools as any }] 
         });
 
+        const chat = model.startChat({
+            history: history,
+        });
+
+        const result = await chat.sendMessage(prompt);
+        const response = result.response;
+        
+        const functionCalls = response.functionCalls();
+        if (functionCalls && functionCalls.length > 0) {
+            const call = functionCalls[0];
+            const args = call.args as any;
+
+            if (call.name === 'change_map_style') {
+                try {
+                    const validStyle = MapService.validateStyle(args.jsonStyle);
+                    return {
+                        text: "He generado un nuevo estilo para tu mapa. Aplicando cambios...",
+                        groundingChunks: [],
+                        mapAction: { type: 'STYLE', payload: validStyle }
+                    };
+                } catch (error: any) {
+                    return { text: `Error generando el estilo: ${error.message}`, groundingChunks: [] };
+                }
+            }
+
+            if (call.name === 'view_location_google_maps') {
+                return {
+                    text: `Moviendo mapa a: ${args.query}`,
+                    groundingChunks: [],
+                    mapAction: { 
+                        type: 'CAMERA', 
+                        payload: { query: args.query } 
+                    }
+                };
+            }
+
+            if (call.name === 'directions_on_google_maps') {
+                return {
+                    text: `Calculando ruta de ${args.origin} a ${args.destination}`,
+                    groundingChunks: [],
+                    mapAction: { 
+                        type: 'ROUTE', 
+                        payload: { origin: args.origin, destination: args.destination } 
+                    }
+                };
+            }
+            
+            if (call.name === 'search_google_maps') {
+                return {
+                    text: `Buscando: ${args.search}`,
+                    groundingChunks: [],
+                    mapAction: {
+                        type: 'SEARCH',
+                        payload: { query: args.search }
+                    }
+                };
+            }
+        }
+
         return {
-            text: response.response.text(),
-            groundingChunks: response.response.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
+            text: response.text(),
+            groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks || [],
         };
+
     } catch (error) {
-        console.error("Error getting response from Gemini:", error);
         let errorMessage = "An unknown error occurred while contacting the AI.";
         if (error instanceof Error) {
             errorMessage = `Error: ${error.message}`;
         }
         return { text: errorMessage, groundingChunks: [] };
-    }
-};
-
-export const getGeminiQuickReplies = async (
-    lastMessage: string,
-    recipient: 'driver' | 'customer'
-): Promise<string[]> => {
-    if (!ai) {
-        console.warn("Gemini service not initialized. Returning fallback quick replies.");
-        return recipient === 'driver' 
-            ? ["¡Entendido!", "Voy en camino.", "Gracias."]
-            : ["¿Dónde vienes?", "Gracias", "Te espero afuera"];
-    }
-    try {
-        const prompt = recipient === 'driver' 
-            ? `Un cliente de delivery te envió este mensaje: "${lastMessage}". Eres el repartidor. Genera 3 respuestas cortas, profesionales y amigables. No más de 5 palabras por respuesta.`
-            : `Un repartidor o restaurante de delivery te envió este mensaje: "${lastMessage}". Eres el cliente. Genera 3 respuestas cortas y amigables. No más de 5 palabras por respuesta.`;
-
-        const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
-        const response = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: SchemaType.ARRAY,
-                    items: {
-                        type: SchemaType.STRING
-                    },
-                    description: "Una lista de 3 respuestas cortas de no más de 5 palabras cada una."
-                }
-            }
-        });
-
-        const jsonText = response.response.text().trim();
-        const replies = JSON.parse(jsonText);
-        return Array.isArray(replies) ? replies.slice(0, 3) : [];
-    } catch (error) {
-        console.error("Error getting quick replies from Gemini:", error);
-        return recipient === 'driver' 
-            ? ["¡Entendido!", "Voy en camino.", "Gracias."]
-            : ["¿Dónde vienes?", "Gracias", "Te espero afuera"];
     }
 };

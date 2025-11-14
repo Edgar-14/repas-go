@@ -1,14 +1,20 @@
+// src/screens/RegistrationScreen.tsx
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { auth } from '../config/firebase';
-import { createAuthUserIfNeeded, uploadDocumentIfAny, createOrUpdateApplication, RegistrationPayload, refreshEmailVerified, sendVerificationEmail } from '../services/registration';
-// Importas el componente de íconos REAL
+// CORRECCIÓN: Importar el tipo en lugar de re-definirlo
+import {
+  createAuthUserIfNeeded,
+  uploadDocumentIfAny,
+  createOrUpdateApplication,
+  RegistrationPayload, // <-- Importar tipo
+  refreshEmailVerified,
+  sendVerificationEmail
+} from '../services/registration';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // --- INICIO DE CORRECCIÓN: Definición de Iconos ---
-// Los componentes <User>, <Lock>, etc., no existen. 
-// Debemos crearlos usando la librería que SÍ importaste.
 const User = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="account-outline" size={props.size || 20} color={props.color} style={props.style} />;
 const Mail = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="email-outline" size={props.size || 20} color={props.color} style={props.style} />;
 const Phone = (props: { color: string, style?: any, size?: number }) => <MaterialCommunityIcons name="phone-outline" size={props.size || 20} color={props.color} style={props.style} />;
@@ -34,7 +40,7 @@ const RegistrationScreen: React.FC = () => {
     const [formData, setFormData] = useState({
         // Step 1
         fullName: '', email: '', phone: '', password: '',
-        rfc: '', curp: '', nss: '', // CORRECCIÓN: Cambiado 'umf' por 'nss' para que coincida con tu input
+        rfc: '', curp: '', nss: '',
         vehicleType: 'motorcycle', vehicleMake: '', vehicleModel: '', vehiclePlate: '',
         bankAccountHolder: '', bankAccountCLABE: '',
         // Step 2
@@ -54,39 +60,37 @@ const RegistrationScreen: React.FC = () => {
 
     const handleNext = () => setStep(prev => Math.min(prev + 1, 6));
     const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-    
+
     const handleInputChange = (name: string, value: string | boolean) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
-    
+
     const handleFilePick = async (name: string) => {
-        // Simulación. Aquí deberías usar 'react-native-document-picker'
+        // Simulación.
         const mockFile = { name: `${name}-seleccionado.pdf`, size: 12345, type: 'application/pdf' };
         setFormData(prev => ({ ...prev, [name]: mockFile }));
     };
-    
+
     const handleSubmit = async () => {
         try {
             setSubmitError(null);
             setSubmitting(true);
-            // 1) Ensure Auth user exists
+
             const user = await createAuthUserIfNeeded(formData.email, formData.password);
             const uid = user.uid;
 
-            // Optionally refresh emailVerified flag
             let emailVerified = false;
             try {
                 emailVerified = await refreshEmailVerified();
             } catch {}
 
-            // 2) Upload documents if provided
             const ineUrl = await uploadDocumentIfAny(uid, 'ine', formData.idDoc);
             const satUrl = await uploadDocumentIfAny(uid, 'sat', formData.satDoc);
             const licenseUrl = await uploadDocumentIfAny(uid, 'license', formData.licenseDoc);
             const circulationCardUrl = await uploadDocumentIfAny(uid, 'circulation', formData.registrationDoc);
             const equipmentPhotoUrl = await uploadDocumentIfAny(uid, 'equipment', formData.equipmentPhoto);
 
-            // 3) Build payload and write application (PENDING)
+            // CORRECCIÓN: Usar el tipo importado
             const payload: RegistrationPayload = {
                 personalData: {
                     fullName: formData.fullName,
@@ -124,7 +128,6 @@ const RegistrationScreen: React.FC = () => {
 
             await createOrUpdateApplication(uid, payload);
 
-            // 4) Success → move to success step
             setSubmitting(false);
             setStep(6);
         } catch (e: any) {
@@ -133,11 +136,9 @@ const RegistrationScreen: React.FC = () => {
         }
     };
 
-    // Componente FileUpload con íconos corregidos
     const FileUpload: React.FC<{ name: string; label: string; file: any | null;}> = ({ name, label, file }) => (
         <View style={[styles.fileUploadContainer, file && styles.fileUploadComplete]}>
             <View style={styles.fileInfo}>
-                {/* ÍCONOS CORREGIDOS */}
                 {file ? <CheckCircle color="#00B894" /> : <FileUp color="#718096" />}
                 <View style={styles.fileTextContainer}>
                     <Text style={styles.fileLabel}>{label}</Text>
@@ -149,17 +150,16 @@ const RegistrationScreen: React.FC = () => {
             </TouchableOpacity>
         </View>
     );
-    
+
     const renderStep = () => {
         switch(step) {
-            case 1: // Coincide con 1.1 Datos Personales y Laborales
+            case 1:
                 return (
                     <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Datos Personales y Laborales</Text>
                         <Text style={styles.stepSubtitle}>Completa tu información personal, de vehículo y bancaria.</Text>
                         <ScrollView>
                             <Text style={styles.sectionTitle}>Información Personal</Text>
-                            {/* --- Inputs con íconos corregidos --- */}
                             <View style={styles.inputContainer}>
                                 <User style={styles.inputIcon} color="#A0AEC0" />
                                 <TextInput placeholder="Nombre Completo" value={formData.fullName} onChangeText={v => handleInputChange('fullName', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
@@ -171,7 +171,6 @@ const RegistrationScreen: React.FC = () => {
                                 <TextInput placeholder="CURP" value={formData.curp} onChangeText={v => handleInputChange('curp', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
                             </View>
                             <View style={styles.inputContainer}>
-                                {/* CORRECCIÓN: Este input era para 'nss' pero tu state tenía 'umf' */}
                                 <TextInput placeholder="NSS (Número de Seguro Social)" value={formData.nss} onChangeText={v => handleInputChange('nss', v)} style={styles.input} keyboardType="number-pad" placeholderTextColor="#A0AEC0" />
                             </View>
                             <View style={styles.inputContainer}>
@@ -186,7 +185,7 @@ const RegistrationScreen: React.FC = () => {
                                 <Lock style={styles.inputIcon} color="#A0AEC0" />
                                 <TextInput placeholder="Contraseña" value={formData.password} onChangeText={v => handleInputChange('password', v)} style={styles.input} secureTextEntry placeholderTextColor="#A0AEC0" />
                             </View>
-                            
+
                             <Text style={styles.sectionTitle}>Información del Vehículo</Text>
                             <View style={styles.vehicleOptions}>
                                 <TouchableOpacity onPress={() => handleInputChange('vehicleType', 'motorcycle')} style={[styles.vehicleButton, formData.vehicleType === 'motorcycle' && styles.vehicleButtonActive]}>
@@ -215,7 +214,7 @@ const RegistrationScreen: React.FC = () => {
                         <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
                     </View>
                 );
-            case 2: // Coincide con 1.2 Documentación Legal
+            case 2:
                 return (
                     <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Documentación Legal</Text>
@@ -227,7 +226,7 @@ const RegistrationScreen: React.FC = () => {
                         <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
                     </View>
                 );
-            case 3: // Coincide con 1.3 Acuerdos Legales y Firma
+            case 3:
                 return (
                     <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Acuerdos Legales y Firma</Text>
@@ -244,13 +243,13 @@ const RegistrationScreen: React.FC = () => {
                         <TouchableOpacity onPress={handleNext} disabled={!formData.agreementsAccepted} style={[styles.nextButton, !formData.agreementsAccepted && styles.disabledButton]}><Text style={styles.nextButtonText}>Firmar y Continuar</Text></TouchableOpacity>
                     </View>
                 );
-            case 4: // Coincide con 1.4 Capacitación Obligatoria
+            case 4:
                 return (
                     <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Capacitación Obligatoria</Text>
                         <Text style={styles.stepSubtitle}>Completa la capacitación para asegurar un servicio de calidad.</Text>
                         <View style={styles.videoPlaceholder}><Video size={48} color="#A0AEC0" /><Text style={styles.videoText}>Video de Capacitación</Text></View>
-                        
+
                         <View style={styles.quizContainer}>
                             <Text style={styles.quizQuestion}>¿Qué es lo primero que debes hacer al llegar al punto de entrega?</Text>
                             <TouchableOpacity onPress={() => handleInputChange('quizAnswer', 'A')} style={styles.quizOption}><View style={[styles.radio, formData.quizAnswer === 'A' && styles.radioChecked]} /><Text style={styles.quizOptionText}>A. Tocar el timbre</Text></TouchableOpacity>
@@ -258,12 +257,12 @@ const RegistrationScreen: React.FC = () => {
                             <TouchableOpacity onPress={() => handleInputChange('quizAnswer', 'C')} style={styles.quizOption}><View style={[styles.radio, formData.quizAnswer === 'C' && styles.radioChecked]} /><Text style={styles.quizOptionText}>C. Llamar al cliente</Text></TouchableOpacity>
                             {formData.quizAnswer && !isQuizCorrect && <Text style={styles.quizFeedback}>Respuesta incorrecta. Intenta de nuevo.</Text>}
                         </View>
-                        
+
                         <FileUpload name="equipmentPhoto" label="Evidencia de Equipo de Trabajo" file={formData.equipmentPhoto} />
                         <TouchableOpacity onPress={handleNext} disabled={!isQuizCorrect || !formData.equipmentPhoto} style={[styles.nextButton, (!isQuizCorrect || !formData.equipmentPhoto) && styles.disabledButton]}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
                     </View>
                 );
-            case 5: // Coincide con 1.5 Confirmación y Envío
+            case 5:
                 return (
                     <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Revisión Final</Text>
@@ -282,7 +281,6 @@ const RegistrationScreen: React.FC = () => {
                             <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <Check color="white" size={12}/>}</View>
                             <Text style={styles.termsText}>Confirmo que toda la información es correcta y acepto los <Text style={styles.linkText}>Términos y Condiciones</Text>.</Text>
                         </TouchableOpacity>
-                        {/* Información sobre verificación de correo */}
                         <Text style={[styles.reviewText, { marginTop: 8 }]}>Nota: Te enviaremos un correo para verificar tu cuenta. Si no lo ves, revisa tu carpeta de spam.</Text>
                         <TouchableOpacity onPress={() => sendVerificationEmail().catch(() => {})} style={[styles.uploadButton, { alignSelf: 'flex-start', marginTop: 8 }]}>
                             <Text style={styles.uploadButtonText}>Reenviar verificación de correo</Text>
@@ -293,7 +291,7 @@ const RegistrationScreen: React.FC = () => {
                         </TouchableOpacity>
                     </View>
                 );
-            case 6: // Pantalla de éxito
+            case 6:
                 return (
                     <View style={styles.stepContainer}>
                         <Send size={64} color="#00B894" style={{alignSelf: 'center'}}/>
@@ -313,7 +311,6 @@ const RegistrationScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : (step <= 5 ? handleBack() : navigation.goBack())} style={styles.backButton}>
-                    {/* ÍCONO CORREGIDO */}
                     <ArrowLeft color="#2D3748" />
                 </TouchableOpacity>
                 {step <= 5 && (
@@ -322,11 +319,6 @@ const RegistrationScreen: React.FC = () => {
                     </View>
                 )}
             </View>
-            {/* CORRECCIÓN: Cambiado ScrollView por View para el paso 1 y 6, 
-                ScrollView para los demás para evitar anidamiento.
-                Actualización: Mejorado para que el ScrollView sea el contenedor principal
-                y el stepContainer crezca.
-            */}
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 {renderStep()}
             </ScrollView>
@@ -334,21 +326,22 @@ const RegistrationScreen: React.FC = () => {
     );
 };
 
+// ... (Estilos permanecen iguales)
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: 'white' },
     header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
     backButton: { padding: 8, marginRight: 8 },
     progressBarContainer: { flex: 1, height: 10, backgroundColor: '#EDF2F7', borderRadius: 5, overflow: 'hidden' },
     progressBar: { height: '100%', backgroundColor: '#00B894', borderRadius: 5 },
-    scrollContainer: { flexGrow: 1, justifyContent: 'flex-start', padding: 24, paddingTop: 16 }, // Ajustado el padding
-    stepContainer: { flex: 1, width: '100%', justifyContent: 'space-between' }, // Permite que el contenido crezca
+    scrollContainer: { flexGrow: 1, justifyContent: 'flex-start', padding: 24, paddingTop: 16 },
+    stepContainer: { flex: 1, width: '100%', justifyContent: 'space-between' },
     stepTitle: { fontSize: 28, fontWeight: 'bold', color: '#2D3748', marginBottom: 8, textAlign: 'center' },
     stepSubtitle: { fontSize: 16, color: '#718096', marginBottom: 24, textAlign: 'center' },
-    sectionTitle: { fontSize: 16, fontWeight: '600', color: '#4A5568', marginTop: 16, marginBottom: 12 }, // Ajustado margen
+    sectionTitle: { fontSize: 16, fontWeight: '600', color: '#4A5568', marginTop: 16, marginBottom: 12 },
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, marginBottom: 16 },
-    inputIcon: { marginLeft: 12 }, // Ajustado para que no esté absoluto
-    input: { flex: 1, height: 50, paddingHorizontal: 16, fontSize: 16, color: '#2D3748' }, // Ajustado padding
-    nextButton: { backgroundColor: '#00B894', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 16 }, // Añadido margen inferior
+    inputIcon: { marginLeft: 12 },
+    input: { flex: 1, height: 50, paddingHorizontal: 16, fontSize: 16, color: '#2D3748' },
+    nextButton: { backgroundColor: '#00B894', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 16, marginBottom: 16 },
     nextButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
     disabledButton: { backgroundColor: '#A0AEC0' },
     vehicleOptions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
@@ -358,13 +351,13 @@ const styles = StyleSheet.create({
     vehicleTextActive: { color: '#00B894', fontWeight: '600' },
     fileUploadContainer: { width: '100%', padding: 16, borderWidth: 2, borderStyle: 'dashed', borderColor: '#CBD5E0', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
     fileUploadComplete: { borderColor: '#00B894', borderStyle: 'solid', backgroundColor: '#F0FFF4' },
-    fileInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 }, // Añadido flex 1
-    fileTextContainer: { marginLeft: 12, flex: 1 }, // Añadido flex 1 para que el texto se corte
+    fileInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    fileTextContainer: { marginLeft: 12, flex: 1 },
     fileLabel: { fontWeight: '600', color: '#2D3748', fontSize: 15 },
     fileName: { fontSize: 12, color: '#718096', marginTop: 2 },
     uploadButton: { backgroundColor: '#EDF2F7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginLeft: 8 },
     uploadButtonText: { color: '#4A5568', fontWeight: '600' },
-    reviewBox: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, maxHeight: 250, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }, // Ajustada altura
+    reviewBox: { backgroundColor: '#F7FAFC', padding: 16, borderRadius: 8, maxHeight: 250, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' },
     reviewText: { fontSize: 14, color: '#4A5568', marginBottom: 6 },
     reviewLabel: { fontWeight: 'bold', color: '#2D3748' },
     termsRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16, marginTop: 16 },
@@ -382,7 +375,7 @@ const styles = StyleSheet.create({
     quizOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
     quizOptionText: { color: '#4A5568', fontSize: 15 },
     radio: { width: 20, height: 20, borderWidth: 2, borderRadius: 10, borderColor: '#CBD5E0', marginRight: 12, justifyContent: 'center', alignItems: 'center' },
-    radioChecked: { borderColor: '#00B894', borderWidth: 6 }, // Estilo de radio "lleno"
+    radioChecked: { borderColor: '#00B894', borderWidth: 6 },
     quizFeedback: { color: '#D63031', fontSize: 13, marginTop: 8, fontWeight: '500' },
 });
 

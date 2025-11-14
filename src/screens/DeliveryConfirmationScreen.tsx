@@ -33,25 +33,28 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
 
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const orders = useSelector((state: RootState) => state.orders);
-  const { activeOrder } = orders as any;
+
+  // --- CORRECCIÓN 1: Selector de Redux directo y tipo-seguro ---
+  const activeOrder = useSelector((state: RootState) => state.orders.activeOrder);
 
   const handleCompleteOrder = async () => {
     if (!activeOrder || !user?.uid) return;
 
-    // Validaciones según método de pago
-    if (activeOrder.paymentMethod === 'CARD' && !customerPin.trim()) {
+    // --- CORRECCIÓN 2: Usar activeOrder.payment.method y 'TARJETA' ---
+    if (activeOrder.payment.method === 'TARJETA' && !customerPin.trim()) {
       Alert.alert('Error', 'Ingresa el PIN del cliente para pedidos con tarjeta');
       return;
     }
 
-    if (activeOrder.paymentMethod === 'CASH') {
+    // --- CORRECCIÓN 2: Usar activeOrder.payment.method y 'EFECTIVO' ---
+    if (activeOrder.payment.method === 'EFECTIVO') {
       const amount = parseFloat(cashReceived);
       if (isNaN(amount) || amount <= 0) {
         Alert.alert('Error', 'Ingresa el monto recibido en efectivo');
         return;
       }
-      if (amount < activeOrder.total) {
+      // --- CORRECCIÓN 3: Usar (activeOrder.total ?? 0) ---
+      if (amount < (activeOrder.total ?? 0)) {
         Alert.alert('Error', 'El monto recibido no puede ser menor al total del pedido');
         return;
       }
@@ -65,9 +68,10 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
 
       const completionData = {
         photoUrl,
-        ...(activeOrder.paymentMethod === 'CARD' && { customerPin }),
-        ...(activeOrder.paymentMethod === 'CASH' && { 
-          cashReceived: parseFloat(cashReceived) 
+        // --- CORRECCIÓN 2 (Lógica) ---
+        ...(activeOrder.payment.method === 'TARJETA' && { customerPin }),
+        ...(activeOrder.payment.method === 'EFECTIVO' && {
+          cashReceived: parseFloat(cashReceived)
         }),
       };
 
@@ -85,11 +89,14 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
             {
               text: 'Ver billetera',
               onPress: () => {
+                // --- CORRECCIÓN 4: Navegar a la pestaña 'Payments' dentro de 'Main' ---
                 navigation.reset({
                   index: 0,
                   routes: [
-                    { name: 'Main' },
-                    { name: 'Payments' }
+                    {
+                      name: 'Main',
+                      params: { screen: 'Payments' } // Navega al tab 'Payments'
+                    }
                   ]
                 });
               }
@@ -105,9 +112,12 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
             }
           ]
         );
+      } else {
+        // Mostrar error si el thunk fue rechazado
+        Alert.alert('Error', (result.payload as any)?.message || 'No se pudo completar el pedido. Intenta de nuevo.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo completar el pedido. Intenta de nuevo.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'No se pudo completar el pedido. Intenta de nuevo.');
     } finally {
       setIsCompleting(false);
     }
@@ -129,6 +139,9 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
     );
   }
 
+  // --- CORRECCIÓN 3: Usar (activeOrder.total ?? 0) ---
+  const orderTotal = activeOrder.total ?? 0;
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -147,10 +160,12 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
             Cliente: {activeOrder.customer.name}
           </Text>
           <Text style={styles.orderInfoText}>
-            Total: ${activeOrder.total.toFixed(2)}
+            {/* --- CORRECCIÓN 3 --- */}
+            Total: ${orderTotal.toFixed(2)}
           </Text>
           <Text style={styles.orderInfoText}>
-            Método de pago: {activeOrder.paymentMethod === 'CASH' ? 'Efectivo' : 'Tarjeta'}
+            {/* --- CORRECCIÓN 2 --- */}
+            Método de pago: {activeOrder.payment.method === 'EFECTIVO' ? 'Efectivo' : 'Tarjeta'}
           </Text>
         </View>
 
@@ -169,7 +184,8 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
         </View>
 
         {/* Confirmación según método de pago */}
-        {activeOrder.paymentMethod === 'CARD' ? (
+        {/* --- CORRECCIÓN 2 --- */}
+        {activeOrder.payment.method === 'TARJETA' ? (
           <View style={styles.confirmationSection}>
             <Text style={styles.sectionTitle}>💳 PIN del cliente</Text>
             <TextInput
@@ -196,11 +212,13 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
               keyboardType="numeric"
             />
             <Text style={styles.confirmationNote}>
-              Total a cobrar: ${activeOrder.total.toFixed(2)}
+              {/* --- CORRECCIÓN 3 --- */}
+              Total a cobrar: ${orderTotal.toFixed(2)}
             </Text>
-            {parseFloat(cashReceived) > activeOrder.total && (
+            {/* --- CORRECCIÓN 3 --- */}
+            {parseFloat(cashReceived) > orderTotal && (
               <Text style={styles.changeNote}>
-                Cambio a entregar: ${(parseFloat(cashReceived) - activeOrder.total).toFixed(2)}
+                Cambio a entregar: ${(parseFloat(cashReceived) - orderTotal).toFixed(2)}
               </Text>
             )}
           </View>
@@ -212,7 +230,8 @@ const DeliveryConfirmationScreen: React.FC<DeliveryConfirmationScreenProps> = ({
           <Text style={styles.instructionsText}>
             1. Asegúrate de que el cliente haya recibido todos los items{'\n'}
             2. Toma una foto clara de la entrega{'\n'}
-            3. {activeOrder.paymentMethod === 'CARD' 
+            {/* --- CORRECCIÓN 2 --- */}
+            3. {activeOrder.payment.method === 'TARJETA'
               ? 'Solicita el PIN de confirmación al cliente'
               : 'Cobra el monto exacto y entrega el cambio si es necesario'
             }{'\n'}

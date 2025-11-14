@@ -1,7 +1,18 @@
 // Este archivo simula la carga de variables de entorno para React Native.
-// En un proyecto real, esto se manejaría con una librería como react-native-config.
+// En un proyecto real, esto se manejaría con una librería como react-native-config
+// o react-native-dotenv.
 
-// Leemos la clave directamente del .env.local que sabemos que existe.
-// Esta es una simplificación para el entorno de desarrollo.
-// ¡NO HACER ESTO EN PRODUCCIÓN DE ESTA MANERA!
-export const GOOGLE_MAPS_API_KEY_FROM_ENV = "AIzaSyAEFo3RDFvqw0-HuSOOBD34NGruHI3hIBQ";
+// 🚨 ADVERTENCIA DE SEGURIDAD 🚨
+// NO COLOQUES TU API KEY DIRECTAMENTE EN ESTE ARCHIVO.
+// La clave "AIzaSy..." que tenías aquí está expuesta y es un riesgo de seguridad.
+//
+// LA FORMA CORRECTA:
+// 1. Crea un archivo llamado ".env" en la raíz de tu proyecto.
+// 2. Añade tu clave ahí:
+//    GOOGLE_MAPS_API_KEY="AIzaSy...TuClaveRealVaAqui"
+//
+// La librería 'react-native-dotenv' (que usas en keys.ts) leerá ese archivo .env
+// de forma segura.
+
+// Dejamos esto como un fallback vacío o con un placeholder.
+export_const_GOOGLE_MAPS_API_KEY_SOURCE = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "PLACEHOLDER_KEY_MOVIDA_A_DOTENV";

@@ -61,8 +61,27 @@ export const loginDriver = createAsyncThunk(
         throw new Error('Perfil de conductor no encontrado');
       }
       
-      const driverData = driverDoc.data() as Driver;
-      
+      // Utilidad: convertir Timestamps de Firestore a ISO string de forma recursiva
+      const sanitizeTimestamps = (obj: any): any => {
+        if (obj == null || typeof obj !== 'object') return obj;
+        // Detecta shape { seconds, nanoseconds }
+        if (
+          Object.prototype.hasOwnProperty.call(obj, 'seconds') &&
+          Object.prototype.hasOwnProperty.call(obj, 'nanoseconds') &&
+          Object.keys(obj).length <= 3 // a veces incluye _nanoseconds
+        ) {
+          const ms = (obj.seconds || 0) * 1000 + Math.floor((obj.nanoseconds || 0) / 1e6);
+          return new Date(ms).toISOString();
+        }
+        if (Array.isArray(obj)) return obj.map(sanitizeTimestamps);
+        const out: any = {};
+        for (const k of Object.keys(obj)) out[k] = sanitizeTimestamps(obj[k]);
+        return out;
+      };
+
+      const driverDataRaw = driverDoc.data();
+      const driverData = sanitizeTimestamps(driverDataRaw) as Driver;
+
       // Validar habilitación del conductor
       const validation = await validateDriverEligibility(user.uid);
       

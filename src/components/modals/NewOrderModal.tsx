@@ -28,6 +28,14 @@ const NewOrderModal: React.FC<Props> = ({ visible, data, onClose }) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = React.useState(false);
   const [timeLeft, setTimeLeft] = React.useState(60);
+  const [showCancel, setShowCancel] = React.useState(false);
+  const QUICK_CANCEL_REASONS = [
+    'Muy lejos del punto de recogida',
+    'Tráfico o cierre de calles',
+    'Problema con el vehículo',
+    'Restaurante saturado o cerrado',
+    'Otro'
+  ];
 
   React.useEffect(() => {
     if (!visible) {
@@ -118,6 +126,7 @@ const NewOrderModal: React.FC<Props> = ({ visible, data, onClose }) => {
             </View>
           </View>
           <View style={styles.actions}>
+            {/* El botón de Cancelar pedido se mueve a la pantalla de navegación (pedido en curso) */}
             <TouchableOpacity style={[styles.btn, styles.reject]} onPress={onClose} disabled={loading}>
               <Text style={styles.btnText}>Rechazar</Text>
             </TouchableOpacity>
@@ -125,6 +134,7 @@ const NewOrderModal: React.FC<Props> = ({ visible, data, onClose }) => {
               <Text style={styles.btnText}>{loading ? 'Asignando…' : 'Aceptar'}</Text>
             </TouchableOpacity>
           </View>
+          {/* Respuestas rápidas de cancelación eliminadas en el modal inicial */}
         </View>
       </View>
     </Modal>

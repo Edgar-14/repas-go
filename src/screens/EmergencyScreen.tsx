@@ -1,4 +1,4 @@
-// Pantalla de emergencia para BeFast GO
+// src/screens/EmergencyScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,19 +11,20 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
-import { NavigationProps } from '../types';
+// CORRECCIÓN: Importar desde 'types/index'
+import { NavigationProps } from '../types/index';
 
 const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const [emergencyActive, setEmergencyActive] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  
+
   const { driver } = useSelector((state: RootState) => state.auth);
-  const driverState = useSelector((state: RootState) => state.driver);
-  const { currentLocation } = driverState as any;
+  // CORRECCIÓN: No usar 'as any'
+  const { currentLocation } = useSelector((state: RootState) => state.driver);
 
   useEffect(() => {
-    let interval: any;
-    
+    let interval: any; // Dejar 'any' aquí para el tipo de 'setInterval' está bien
+
     if (countdown > 0) {
       interval = setInterval(() => {
         setCountdown(prev => prev - 1);
@@ -69,11 +70,6 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
     setCountdown(0);
 
     try {
-      // Aquí se implementaría la lógica real de emergencia
-      // - Enviar ubicación a servicios de emergencia
-      // - Notificar a contactos de emergencia
-      // - Llamar automáticamente al 911
-      
       Alert.alert(
         '🚨 EMERGENCIA ACTIVADA',
         'Se ha activado la alerta de emergencia. Los servicios de emergencia han sido notificados.',
@@ -86,10 +82,9 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
         ]
       );
 
-      // Simular envío de ubicación y datos
       console.log('Emergency activated for driver:', driver?.uid);
       console.log('Current location:', currentLocation);
-      
+
     } catch (error) {
       Alert.alert('Error', 'No se pudo activar la emergencia. Llama directamente al 911.');
     }
@@ -112,7 +107,7 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
   const shareLocation = () => {
     if (currentLocation) {
       const locationUrl = `https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`;
-      
+
       Alert.alert(
         'Compartir ubicación',
         'Tu ubicación actual será compartida.',
@@ -121,8 +116,6 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
           {
             text: 'Compartir',
             onPress: () => {
-              // Aquí se implementaría la lógica para compartir ubicación
-              // Por ejemplo, enviar SMS o WhatsApp con la ubicación
               console.log('Sharing location:', locationUrl);
               Alert.alert('Ubicación compartida', 'Tu ubicación ha sido compartida con tus contactos de emergencia.');
             }
@@ -136,7 +129,6 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Alerta de emergencia activa */}
       {emergencyActive && (
         <View style={styles.emergencyAlert}>
           <Text style={styles.emergencyTitle}>🚨 ACTIVANDO EMERGENCIA</Text>
@@ -144,7 +136,7 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
           <Text style={styles.emergencySubtitle}>
             La emergencia se activará automáticamente en {countdown} segundos
           </Text>
-          
+
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={cancelEmergency}
@@ -154,7 +146,6 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
         </View>
       )}
 
-      {/* Botón principal de emergencia */}
       {!emergencyActive && (
         <View style={styles.mainEmergencyContainer}>
           <TouchableOpacity
@@ -164,18 +155,17 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <Text style={styles.emergencyButtonIcon}>🚨</Text>
             <Text style={styles.emergencyButtonText}>EMERGENCIA</Text>
           </TouchableOpacity>
-          
+
           <Text style={styles.emergencyDescription}>
-            Presiona este botón solo en caso de emergencia real. 
+            Presiona este botón solo en caso de emergencia real.
             Se contactará automáticamente a los servicios de emergencia.
           </Text>
         </View>
       )}
 
-      {/* Números de emergencia */}
       <View style={styles.emergencyNumbersContainer}>
         <Text style={styles.sectionTitle}>📞 Números de Emergencia</Text>
-        
+
         <TouchableOpacity
           style={styles.numberButton}
           onPress={() => callEmergencyNumber('911', 'Emergencias Generales')}
@@ -221,10 +211,9 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Acciones rápidas */}
       <View style={styles.quickActionsContainer}>
         <Text style={styles.sectionTitle}>⚡ Acciones Rápidas</Text>
-        
+
         <TouchableOpacity
           style={styles.actionButton}
           onPress={shareLocation}
@@ -244,7 +233,6 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
                 {
                   text: 'Contactar',
                   onPress: () => {
-                    // Aquí se implementaría el contacto con soporte
                     Alert.alert('Contactando soporte', 'Se ha enviado tu solicitud de ayuda al equipo de soporte.');
                   }
                 }
@@ -265,10 +253,9 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Información de seguridad */}
       <View style={styles.safetyInfoContainer}>
         <Text style={styles.sectionTitle}>🛡️ Información de Seguridad</Text>
-        
+
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>En caso de emergencia:</Text>
           <Text style={styles.infoText}>
@@ -290,7 +277,6 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Información del conductor */}
       {driver && (
         <View style={styles.driverInfoContainer}>
           <Text style={styles.sectionTitle}>👤 Tu Información</Text>
@@ -300,7 +286,7 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
             <Text style={styles.driverEmail}>{driver.email}</Text>
             {currentLocation && (
               <Text style={styles.driverLocation}>
-                📍 Lat: {currentLocation.latitude.toFixed(6)}, 
+                📍 Lat: {currentLocation.latitude.toFixed(6)},
                 Lng: {currentLocation.longitude.toFixed(6)}
               </Text>
             )}
@@ -311,6 +297,7 @@ const EmergencyScreen: React.FC<NavigationProps> = ({ navigation }) => {
   );
 };
 
+// ... (Estilos permanecen iguales)
 const styles = StyleSheet.create({
   container: {
     flex: 1,

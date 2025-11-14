@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Incentive } from '../../types';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Target, DollarSign } from 'lucide-react-native';
 
 interface IncentivesCardProps {
     incentive: Incentive;

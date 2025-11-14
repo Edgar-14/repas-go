@@ -1,13 +1,13 @@
 // App principal de BeFast GO
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react'; // <-- 'useState' eliminado, no se usaba
 import { View, StyleSheet } from 'react-native';
 import { Provider } from 'react-redux';
 import { store } from './src/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import { NavigationContainer } from '@react-navigation/native';
 import { navigationRef } from './src/navigation/NavigationService';
-import NotificationHandler from './src/components/NotificationHandler';
-import { initializeFirebase, setupNotificationListeners, setupPushNotifications } from './src/config/firebase';
+// --- CORRECCIÓN 1: 'setupPushNotifications' eliminado ---
+import { initializeFirebase } from './src/config/firebase';
 import NotificationService from './src/services/NotificationService';
 
 import { setGoogleMapsApiKey } from './src/config/runtime';
@@ -17,23 +17,27 @@ const App = () => {
 
   useEffect(() => {
     // --- Configuración de Claves en Tiempo de Ejecución ---
-    // En una app real, esta clave vendría de un servicio seguro, no de un archivo.
-    // Aquí simulamos la carga de la clave desde el entorno.
     if (GOOGLE_MAPS_API_KEY_FROM_ENV) {
       setGoogleMapsApiKey(GOOGLE_MAPS_API_KEY_FROM_ENV);
     } else {
       console.warn('¡ADVERTENCIA! La clave de API de Google Maps no está configurada.');
     }
-    
+
     const initFirebase = async () => {
       const ok = await initializeFirebase();
       if (ok) {
-        setupNotificationListeners();
-        await setupPushNotifications().catch(() => {});
+        // --- CORRECCIÓN 2: 'setupPushNotifications' eliminado ---
+        // NotificationService.initialize() ya se encarga de los permisos y listeners
         await NotificationService.initialize();
       }
     };
     initFirebase();
+
+    // --- CORRECCIÓN 3: Añadir la función de limpieza ---
+    // Esto es importante para limpiar los listeners de notificación cuando la app se cierra
+    return () => {
+      NotificationService.cleanup();
+    };
   }, []);
 
   return (
@@ -41,10 +45,8 @@ const App = () => {
       <View style={styles.container}>
         <NavigationContainer ref={navigationRef}>
           <AppNavigator />
-          <NotificationHandler />
+          {/* NotificationHandler removido: lógica gestionada en NotificationService */}
         </NavigationContainer>
-        
-
       </View>
     </Provider>
   );

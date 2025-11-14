@@ -15,18 +15,16 @@ import {
   DashboardScreen,
   OrderDetailScreen,
   OrdersScreen, // Esta pantalla ahora maneja Disponibles e Historial
-  NavigationScreen,
+  MapsScreen, // <-- NUEVA PANTALLA DE MAPA
   ProfileScreen,
   PaymentsScreen,
   PaymentsHistoryScreen,
-  // OrdersHistoryScreen, // <-- CORRECCIÓN: Eliminada esta importación
   NotificationsScreen,
   EmergencyScreen,
   SettingsScreen,
   DocumentsScreen,
   DeliveryConfirmationScreen,
   IncidentsScreen,
-
   MetricsScreen,
   OrderCompletionScreen,
   OrderRatingScreen,
@@ -112,8 +110,8 @@ const MainTabNavigator = () => {
       />
       
       <Tab.Screen
-        name="Navigation"
-        component={NavigationScreen as any}
+        name="Maps"
+        component={MapsScreen as any}
         options={{
           tabBarLabel: 'Mapa',
           tabBarIcon: ({ focused }) => (
@@ -205,125 +203,104 @@ const AppNavigator = () => {
             fontWeight: '700',
             fontSize: 18,
           },
-
         }}
-        initialRouteName="Login"
+        initialRouteName={isAuthenticated ? 'Main' : 'Login'}
       >
-        {/* Authentication Flow */}
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen as any}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Registration"
-          component={RegistrationScreen as any}
-          options={{ title: 'Registro de Conductor' }}
-        />
-        <Stack.Screen
-          name="Onboarding"
-          component={OnboardingScreen as any}
-          options={{ headerShown: false }}
-        />
+        {!isAuthenticated && (
+          <>
+            <Stack.Screen
+              name="Login"
+              component={LoginScreen as any}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Registration"
+              component={RegistrationScreen as any}
+              options={{ title: 'Registro de Conductor' }}
+            />
+            <Stack.Screen
+              name="Onboarding"
+              component={OnboardingScreen as any}
+              options={{ headerShown: false }}
+            />
+          </>
+        )}
 
-        {/* Main App Flow */}
-        <Stack.Screen
-          name="Main"
-          component={MainTabNavigator}
-          options={{ headerShown: false }}
-        />
-
-        {/* Order Management */}
-        <Stack.Screen
-          name="OrderDetail"
-          component={OrderDetailScreen as any}
-          options={{ title: 'Detalles del Pedido' }}
-        />
-        <Stack.Screen
-          name="OrderCompletion"
-          component={OrderCompletionScreen as any}
-          options={{ title: 'Completar Pedido' }}
-        />
-        <Stack.Screen
-          name="OrderRating"
-          component={OrderRatingScreen as any}
-          options={{ title: 'Calificar Cliente' }}
-        />
-        
-        {/* CORRECCIÓN: Eliminada la pantalla 'OrdersHistory'
-          La funcionalidad de historial ahora vive dentro de la pantalla 'Orders'
-          que está en el Tab Navigator (MainTabNavigator).
-        */}
-        {/* <Stack.Screen
-          name="OrdersHistory"
-          component={OrdersHistoryScreen as any}
-          options={{ title: 'Historial de Pedidos' }}
-        /> */}
-
-        {/* Navigation & Delivery */}
-        <Stack.Screen
-          name="GPSNavigation"
-          component={GPSNavigationScreen as any}
-          options={{ 
-            headerShown: false,
-            gestureEnabled: false
-          }}
-        />
-        <Stack.Screen
-          name="DeliveryConfirmation"
-          component={DeliveryConfirmationScreen as any}
-          options={{ 
-            title: 'Confirmar Entrega',
-            gestureEnabled: false,
-            headerStyle: { backgroundColor: '#00B894' },
-            headerTintColor: '#FFFFFF'
-          }}
-        />
-
-        {/* Financial */}
-        <Stack.Screen
-          name="PaymentsHistory"
-          component={PaymentsHistoryScreen as any}
-          options={{ title: 'Historial de Pagos' }}
-        />
-        <Stack.Screen
-          name="Metrics"
-          component={MetricsScreen as any}
-          options={{ title: 'Mis Estadísticas' }}
-        />
-
-
-
-        {/* Settings & Profile */}
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen as any}
-          options={{ title: 'Configuración' }}
-        />
-        <Stack.Screen
-          name="Documents"
-          component={DocumentsScreen as any}
-          options={{ title: 'Mis Documentos' }}
-        />
-
-        {/* Emergency & Support */}
-        <Stack.Screen
-          name="Emergency"
-          component={EmergencyScreen as any}
-          options={{ 
-            title: 'Emergencia',
-            headerStyle: { backgroundColor: '#FF3B30' },
-            headerTintColor: '#FFFFFF'
-          }}
-        />
-        <Stack.Screen
-          name="Incidents"
-          component={IncidentsScreen as any}
-          options={{ title: 'Reportar Incidente' }}
-        />
+        {isAuthenticated && (
+          <>
+            <Stack.Screen
+              name="Main"
+              component={MainTabNavigator}
+              options={{ headerShown: false }}
+            />
+            {/* Order Management */}
+            <Stack.Screen
+              name="OrderDetail"
+              component={OrderDetailScreen as any}
+              options={{ title: 'Detalles del Pedido' }}
+            />
+            <Stack.Screen
+              name="OrderCompletion"
+              component={OrderCompletionScreen as any}
+              options={{ title: 'Completar Pedido' }}
+            />
+            <Stack.Screen
+              name="OrderRating"
+              component={OrderRatingScreen as any}
+              options={{ title: 'Calificar Cliente' }}
+            />
+            {/* Navigation & Delivery */}
+            <Stack.Screen
+              name="GPSNavigation"
+              component={GPSNavigationScreen as any}
+              options={{ headerShown: false, gestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="DeliveryConfirmation"
+              component={DeliveryConfirmationScreen as any}
+              options={{
+                title: 'Confirmar Entrega',
+                gestureEnabled: false,
+                headerStyle: { backgroundColor: '#00B894' },
+                headerTintColor: '#FFFFFF'
+              }}
+            />
+            {/* Financial */}
+            <Stack.Screen
+              name="PaymentsHistory"
+              component={PaymentsHistoryScreen as any}
+              options={{ title: 'Historial de Pagos' }}
+            />
+            <Stack.Screen
+              name="Metrics"
+              component={MetricsScreen as any}
+              options={{ title: 'Mis Estadísticas' }}
+            />
+            {/* Settings & Profile */}
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen as any}
+              options={{ title: 'Configuración' }}
+            />
+            <Stack.Screen
+              name="Documents"
+              component={DocumentsScreen as any}
+              options={{ title: 'Mis Documentos' }}
+            />
+            {/* Emergency & Support */}
+            <Stack.Screen
+              name="Emergency"
+              component={EmergencyScreen as any}
+              options={{ title: 'Emergencia', headerStyle: { backgroundColor: '#FF3B30' }, headerTintColor: '#FFFFFF' }}
+            />
+            <Stack.Screen
+              name="Incidents"
+              component={IncidentsScreen as any}
+              options={{ title: 'Reportar Incidente' }}
+            />
+          </>
+        )}
       </Stack.Navigator>
-      
-      {/* Global NewOrderModal */}
       <NewOrderModal
         visible={!!newOrderToShow}
         data={newOrderToShow}

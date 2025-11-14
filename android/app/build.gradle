@@ -80,24 +80,25 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
+    ndkVersion = rootProject.ext.ndkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
+    compileSdk = rootProject.ext.compileSdkVersion
 
-    namespace "com.befastgo"
+    namespace = "com.befastgo"
     defaultConfig {
-        applicationId "com.be_fast.be_fast"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.be_fast.be_fast"
+        minSdkVersion = rootProject.ext.minSdkVersion
+        targetSdkVersion = rootProject.ext.targetSdkVersion
+        versionCode = 1
+        versionName = "1.0.0"
         manifestPlaceholders = [
             usesCleartextTraffic: true,
-            MAPS_API_KEY: (project.findProperty("MAPS_API_KEY") ?: "AIzaSyAEFo3RDFvqw0-HuSOOBD34NGruHI3hIBQ")
+            // Mapea el placeholder que usa el AndroidManifest a la key del plugin de secretos
+            "com.google.android.geo.API_KEY": project.findProperty("MAPS_API_KEY") ?: System.getenv("MAPS_API_KEY") ?: ""
         ]
-        multiDexEnabled true
+        multiDexEnabled = true
         // Limitar recursos de idiomas durante desarrollo
-        resConfigs "es"
+        resConfigs("es")
     }
     signingConfigs {
         debug {
@@ -106,24 +107,31 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
-            minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            signingConfig = signingConfigs.release
+            minifyEnabled = enableProguardInReleaseBuilds
+            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            shrinkResources = enableProguardInReleaseBuilds
         }
     }
 
     compileOptions {
-        coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 }
 
