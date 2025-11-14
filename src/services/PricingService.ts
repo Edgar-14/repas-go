@@ -154,7 +154,7 @@ class PricingService {
     const minimumWageReference = 8364; // MXN (Salario mínimo de referencia según documento)
     
     // Obtener factor de exclusión según tipo de vehículo del repartidor
-    const vehicleTypeUpper = vehicleType.toUpperCase();
+    const vehicleTypeUpper = vehicleType.toUpperCase() as keyof typeof VEHICLE_EXCLUSION_FACTORS;
     const exclusionFactor = VEHICLE_EXCLUSION_FACTORS[vehicleTypeUpper] || 0.30;
     
     // Cálculo: Ingreso Neto = Ingreso Bruto - (Ingreso Bruto * Factor de Exclusión)

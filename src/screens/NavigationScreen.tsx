@@ -285,7 +285,7 @@ const NavigationScreen: React.FC<NavigationScreenProps> = ({ navigation, route }
       {/* Barra de acciones del mapa */}
       <View style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#fff', borderBottomColor: '#E2E8F0', borderBottomWidth: 1 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setRouteOrigin(undefined)}>
+          <TouchableOpacity onPress={() => setRouteOrigin(null)}>
             <Text style={{ color: '#00B894', fontWeight: '600' }}>Desde mi ubicación</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleSearchNearby('tienda oxxo')}>
@@ -308,7 +308,7 @@ const NavigationScreen: React.FC<NavigationScreenProps> = ({ navigation, route }
           showRoute={true}
           isPickupPhase={isPickupPhase}
           customMapStyle={customMapStyle as any}
-          searchResults={searchResults}
+          searchResults={searchResults.filter(r => r.title).map(r => ({...r, title: r.title!}))}
           customRoute={routeOrigin && routeDestination ? { origin: routeOrigin, destination: routeDestination } : null}
           onRouteReady={(data) => setRouteInfo(data)}
           heatmapPoints={heatmapPoints}

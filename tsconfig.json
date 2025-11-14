@@ -23,6 +23,7 @@
     "babel.config.js",
     "metro.config.js",
     "jest.config.js",
-    "ma"
+    "ma",
+    "getDriverOrders.ts"
   ]
 }

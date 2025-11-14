@@ -82,7 +82,8 @@ export const processWithdrawal = createAsyncThunk(
     method: 'bank_transfer' | 'card_deposit' 
   }) => {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.PROCESS_WITHDRAWAL)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.processPayment)({
+        operation: 'WITHDRAWAL',
         driverId,
         amount,
         method,
@@ -117,7 +118,8 @@ export const payDebt = createAsyncThunk(
     paymentMethod: 'bank_transfer' | 'cash_deposit' | 'oxxo' 
   }) => {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.PROCESS_DEBT_PAYMENT)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.processPayment)({
+        operation: 'DEBT_PAYMENT',
         driverId,
         amount,
         paymentMethod,

@@ -12,6 +12,9 @@ import MapViewDirections from 'react-native-maps-directions';
 import { GOOGLE_MAPS_API_KEY } from '../../config/keys';
 import { firestore } from '../../config/firebase';
 
+// Alias para evitar error de tipos con Heatmap en algunas versiones
+const HeatmapAny = Heatmap as any;
+
 interface Location {
   latitude: number;
   longitude: number;
@@ -40,6 +43,7 @@ interface TrackingMapProps {
 
   // Props de IA
   customStyle?: any[];
+  customMapStyle?: any[]; // alias para compatibilidad con consumidores
   cameraTarget?: {
     latitude: number;
     longitude: number;
@@ -75,6 +79,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
   showRoute = true,
   isPickupPhase = false,
   customStyle,
+  customMapStyle,
   cameraTarget,
   customRoute,
   searchResults = [],
@@ -224,6 +229,8 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
         }
       : DEFAULT_LOCATION;
 
+  const effectiveCustomStyle = customStyle || customMapStyle;
+
   return (
     <View style={[styles.container, style]}>
       <MapView
@@ -231,7 +238,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
         provider={PROVIDER_GOOGLE}
         style={styles.map} // Este estilo debe ser { flex: 1 }
         initialRegion={initialMapRegion}
-        customMapStyle={customStyle}
+        customMapStyle={effectiveCustomStyle}
         showsUserLocation={showUserLocation}
         showsMyLocationButton={false}
         showsCompass={true}
@@ -339,7 +346,7 @@ const TrackingMap: React.FC<TrackingMapProps> = ({
 
         {/* Heatmap de puntos de demanda */}
         {heatmapPoints.length > 0 && (
-          <Heatmap
+          <HeatmapAny
             points={heatmapPoints}
             radius={40}
             opacity={0.7}
@@ -437,3 +444,4 @@ const styles = StyleSheet.create({
 });
 
 export default React.memo(TrackingMap);
+

@@ -11,7 +11,8 @@ export const useDriverData = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!authDriver || !authDriver.uid) {
+    const uid = (authDriver as any)?.uid;
+    if (!uid) {
       setLoading(false);
       return;
     }
@@ -20,11 +21,12 @@ export const useDriverData = () => {
 
     const unsubscribe = firestore()
       .collection(COLLECTIONS.DRIVERS)
-      .doc(authDriver.uid)
+      .doc(uid)
       .onSnapshot(
         (doc) => {
           if (doc.exists) {
-            setDriverData({ uid: doc.id, ...doc.data() } as Driver);
+            const data = doc.data() as any;
+            setDriverData({ ...(data || {}), uid: doc.id } as Driver);
             setError(null);
           } else {
             setError(new Error('No se encontró el perfil del repartidor en la base de datos.'));
@@ -34,13 +36,13 @@ export const useDriverData = () => {
         },
         (err) => {
           console.error('Error escuchando datos del repartidor:', err);
-          setError(err);
+          setError(err as any);
           setLoading(false);
         }
       );
 
     return () => unsubscribe();
-  }, [authDriver?.uid]);
+  }, [(authDriver as any)?.uid]);
 
   return { driverData, loading, error };
 };

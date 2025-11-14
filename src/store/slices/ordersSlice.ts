@@ -78,7 +78,7 @@ export const acceptOrder = createAsyncThunk(
   async ({ orderId, driverId }: { orderId: string; driverId: string }) => {
     try {
       // Llamar a la Cloud Function existente del ecosistema
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.VALIDATE_ORDER_ASSIGNMENT)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.validateOrderAssignment)({
         orderId,
         driverId,
         action: 'ACCEPT'
@@ -109,7 +109,7 @@ export const updateOrderStatus = createAsyncThunk(
   'orders/updateOrderStatus',
   async ({ orderId, status, driverId, reason }: { orderId: string; status: OrderStatus; driverId: string; reason?: string }) => {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.HANDLE_ORDER_WORKFLOW)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.handleOrderWorkflow)({
         orderId,
         driverId,
         newStatus: status,
@@ -147,7 +147,7 @@ export const completeOrder = createAsyncThunk(
   }) => {
     try {
       // Llamar a la Cloud Function existente del ecosistema
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.PROCESS_ORDER_COMPLETION)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.processOrderCompletion)({
         orderId,
         driverId,
         photoUrl: completionData.photoUrl,
@@ -299,6 +299,5 @@ export const {
   removeOrderFromAvailable 
 } = ordersSlice.actions;
 
-export { loadOrders };
 
 export default ordersSlice.reducer;

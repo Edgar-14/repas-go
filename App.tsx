@@ -11,14 +11,14 @@ import { initializeFirebase } from './src/config/firebase';
 import NotificationService from './src/services/NotificationService';
 
 import { setGoogleMapsApiKey } from './src/config/runtime';
-import { GOOGLE_MAPS_API_KEY_FROM_ENV } from './src/config/env'; // Simulando la carga desde el entorno
+import { GOOGLE_MAPS_API_KEY_SOURCE } from './src/config/env'; // Simulando la carga desde el entorno
 
 const App = () => {
 
   useEffect(() => {
     // --- Configuración de Claves en Tiempo de Ejecución ---
-    if (GOOGLE_MAPS_API_KEY_FROM_ENV) {
-      setGoogleMapsApiKey(GOOGLE_MAPS_API_KEY_FROM_ENV);
+    if (GOOGLE_MAPS_API_KEY_SOURCE) {
+      setGoogleMapsApiKey(GOOGLE_MAPS_API_KEY_SOURCE);
     } else {
       console.warn('¡ADVERTENCIA! La clave de API de Google Maps no está configurada.');
     }
@@ -26,17 +26,14 @@ const App = () => {
     const initFirebase = async () => {
       const ok = await initializeFirebase();
       if (ok) {
-        // --- CORRECCIÓN 2: 'setupPushNotifications' eliminado ---
-        // NotificationService.initialize() ya se encarga de los permisos y listeners
         await NotificationService.initialize();
       }
     };
     initFirebase();
 
-    // --- CORRECCIÓN 3: Añadir la función de limpieza ---
-    // Esto es importante para limpiar los listeners de notificación cuando la app se cierra
+    // --- Limpieza de listeners ---
     return () => {
-      NotificationService.cleanup();
+      // Si en el futuro añadimos un método cleanup, se llamará aquí
     };
   }, []);
 

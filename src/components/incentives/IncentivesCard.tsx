@@ -14,11 +14,11 @@ const IncentivesCard: React.FC<IncentivesCardProps> = ({ incentive }) => {
         <View style={styles.card}>
             <View style={styles.header}>
                 <View style={styles.titleContainer}>
-                    <Target size={18} color="#00B894" style={styles.icon} />
+                    <Target size={18} style={styles.icon as any} />
                     <Text style={styles.title}>{incentive.title}</Text>
                 </View>
                 <View style={styles.rewardContainer}>
-                    <DollarSign size={16} color="#00B894" />
+                    <DollarSign size={16} />
                     <Text style={styles.rewardText}>{incentive.reward}</Text>
                 </View>
             </View>
@@ -29,7 +29,7 @@ const IncentivesCard: React.FC<IncentivesCardProps> = ({ incentive }) => {
                     <Text style={styles.progressValueText}>{incentive.progress} / {incentive.goal} viajes</Text>
                 </View>
                 <View style={styles.progressBarBackground}>
-                    <View 
+                    <View
                         style={[styles.progressBarFill, { width: `${progressPercentage}%` }]}
                     />
                 </View>

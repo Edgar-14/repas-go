@@ -1,3 +1,5 @@
+import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+
 // A simplified Order type based on the properties used in DashboardScreen.tsx
 export interface Order {
   id: string;
@@ -20,12 +22,26 @@ export interface Order {
 // FIX: Expanded Driver type to be compatible with all mock data sources.
 // Made `personalData`, `email`, and `stats` optional to avoid breaking `useDriver.ts` which uses a simpler mock.
 export interface Driver {
+  uid?: string;
   personalData?: {
     fullName: string;
+    phone?: string;
+    [key: string]: any;
   };
   email?: string;
+  administrative?: {
+    befastStatus?: 'PENDING' | 'APPROVED' | 'ACTIVE' | 'SUSPENDED';
+    imssStatus?: 'ACTIVO_COTIZANDO' | 'PENDING' | 'INACTIVE';
+    documentsStatus?: 'APPROVED' | 'PENDING' | 'EXPIRED';
+    trainingStatus?: 'COMPLETED' | 'PENDING' | 'EXPIRED';
+    idseApproved?: boolean;
+    [key: string]: any;
+  };
   operational: {
     isOnline: boolean;
+    status?: 'ACTIVE' | 'BUSY' | 'OFFLINE' | 'BREAK';
+    currentOrderId?: string | null;
+    currentLocation?: { latitude: number; longitude: number };
   };
   stats?: {
     rating: number;
@@ -36,11 +52,14 @@ export interface Driver {
     xp: number;
     xpGoal: number;
     rank: string;
+    totalOrders?: number;
   };
   wallet: {
     balance: number;
     pendingDebts: number;
+    creditLimit?: number;
   };
+  [key: string]: any;
 }
 
 // FIX: Added missing OrderStatus enum.
@@ -142,6 +161,66 @@ export interface Notification {
     id: string;
     message: string;
     type: 'success' | 'error' | 'info';
+}
+
+// Tipos adicionales para compatibilidad con módulos que importan desde '../types'
+export interface WalletTransaction {
+    id: string;
+    driverId: string;
+    type: TransactionType;
+    amount: number;
+    description: string;
+    orderId?: string;
+    timestamp: Date | FirebaseFirestoreTypes.Timestamp;
+    status: 'PENDING' | 'COMPLETED' | 'FAILED';
+    date?: string;
+}
+
+export interface ValidationResult {
+    approved?: boolean;
+    reason?: string;
+    canReceiveOrders?: boolean;
+    blockingReason?: string;
+    message?: string;
+}
+
+export interface CriticalValidation {
+    imssValidation: {
+        idseApproved: boolean;
+        imssStatus: 'ACTIVO_COTIZANDO' | 'PENDING' | 'INACTIVE';
+        nssValid: boolean;
+    };
+    operationalValidation: {
+        befastStatus: 'ACTIVE' | 'PENDING' | 'SUSPENDED';
+        documentsValid: boolean;
+        trainingCurrent: boolean;
+        debtWithinLimit: boolean;
+    };
+}
+
+export interface MapLocation {
+    latitude: number;
+    longitude: number;
+    title?: string;
+    description?: string;
+}
+
+export interface MapAction {
+    intent: 'VIEW_LOCATION' | 'SEARCH_PLACES' | 'DIRECTIONS' | 'CLEAR';
+    params?: any;
+}
+
+export interface NewOrderNotificationPayload {
+    id: string;
+    storeName: string;
+    pickupAddress: string;
+    deliveryAddress: string;
+    total: number;
+    paymentMethod: 'CASH' | 'CARD' | string;
+    distanceKm: number;
+    deliveryFee: number;
+    tip: number;
+    [key: string]: any;
 }
 
 // React Navigation Type Definitions

@@ -56,7 +56,7 @@ const OrderRatingScreen: React.FC = () => {
                         <MaterialCommunityIcons name="currency-usd" size={20} color="#718096" />
                         <Text style={styles.detailLabel}>Ganancia Total</Text>
                     </View>
-                    <Text style={styles.totalEarnings}>${(order.totalEarnings || order.estimatedEarnings || 0).toFixed(2)}</Text>
+                    <Text style={styles.totalEarnings}>${(order.totalEarnings || 0).toFixed(2)}</Text>
                 </View>
                 <View style={styles.divider}/>
                 <View style={styles.detailRow}>

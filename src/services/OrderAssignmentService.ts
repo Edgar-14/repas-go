@@ -100,7 +100,7 @@ class OrderAssignmentService {
           continue; // Saltar conductor sin ubicación
         }
 
-        const distanceToPickup = PricingService.calculateDriverToPickupDistance(
+        const distanceToPickup = await PricingService.calculateDriverToPickupDistance(
           driverLat,
           driverLon,
           pickupLat,
@@ -144,7 +144,7 @@ class OrderAssignmentService {
   async countActiveOrders(driverId: string): Promise<number> {
     try {
       const snapshot = await firestore()
-        .collection(COLLECTIONS.ORDERS)
+        .collection(COLLELECTIONS.ORDERS)
         .where('driverId', '==', driverId)
         .where('status', 'in', ['ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED'])
         .get();
@@ -274,7 +274,7 @@ class OrderAssignmentService {
       const driverDoc = await firestore().collection(COLLECTIONS.DRIVERS).doc(driverId).get();
       const driverData = driverDoc.data();
 
-      const distanceToPickup = PricingService.calculateDriverToPickupDistance(
+      const distanceToPickup = await PricingService.calculateDriverToPickupDistance(
         driverData?.operational?.currentLocation?.latitude,
         driverData?.operational?.currentLocation?.longitude,
         orderData.pickup.location.latitude,
@@ -289,14 +289,14 @@ class OrderAssignmentService {
       );
 
       // 4. Estimar ETA
-      const orderDistance = PricingService.calculateOrderDistance(
+      const orderDistance = await PricingService.calculateOrderDistance(
         orderData.pickup.location.latitude,
         orderData.pickup.location.longitude,
         orderData.delivery.location.latitude,
         orderData.delivery.location.longitude
       );
 
-      const estimatedETA = PricingService.estimateDeliveryTime(
+      const estimatedETA = await PricingService.estimateDeliveryTime(
         distanceToPickup + orderDistance
       );
 

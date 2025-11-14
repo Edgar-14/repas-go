@@ -1,6 +1,6 @@
 // Servicio de Nómina y Clasificación Laboral para BeFast GO
 import { firestore, functions, COLLECTIONS, CLOUD_FUNCTIONS } from '../config/firebase';
-import PricingService from './PricingService';
+import pricingService from './PricingService';
 
 /**
  * Estados de clasificación laboral del conductor
@@ -16,12 +16,6 @@ export enum LaborClassification {
  * Implementa los ciclos semanales y mensuales según documento oficial
  */
 class PayrollService {
-  private pricingService: PricingService;
-
-  constructor() {
-    this.pricingService = new PricingService();
-  }
-
   /**
    * CICLO SEMANAL: Genera recibo de pago y lo timbra (CFDI)
    * Se ejecuta cada viernes para formalizar ganancias de la semana
@@ -123,7 +117,7 @@ class PayrollService {
       const grossIncome = await this.calculateMonthlyIncome(driverId, month, year);
 
       // Calcular clasificación laboral
-      const classification = this.pricingService.calculateLaborClassification(
+      const classification = pricingService.calculateLaborClassification(
         grossIncome,
         vehicleType
       );

@@ -15,4 +15,4 @@
 // de forma segura.
 
 // Dejamos esto como un fallback vacío o con un placeholder.
-export_const_GOOGLE_MAPS_API_KEY_SOURCE = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "PLACEHOLDER_KEY_MOVIDA_A_DOTENV";
+export const GOOGLE_MAPS_API_KEY_SOURCE = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'PLACEHOLDER_KEY_MOVIDA_A_DOTENV';

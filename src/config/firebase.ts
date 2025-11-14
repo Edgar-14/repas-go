@@ -33,7 +33,10 @@ export const COLLECTIONS = {
   SHIPDAY_DRIVERS: 'shipdayDrivers',
   SHIPDAY_ORDERS: 'shipdayOrders',
   SHIPDAY_WEBHOOK_LOGS: 'shipdayWebhookLogs',
-  USERS: 'users'
+  USERS: 'users',
+  // Alias/colecciones adicionales referenciadas en servicios
+  INCIDENTS: 'incidents',
+  FORMAL_REVIEWS: 'formalReviews',
 };
 
 export const CLOUD_FUNCTIONS = {
@@ -62,7 +65,25 @@ export const CLOUD_FUNCTIONS = {
   driverChatbot: 'driverChatbot',
   adminChatbot: 'adminChatbot',
   processDriverDocuments: 'processDriverDocuments',
-  auditFinancialTransaction: 'auditFinancialTransaction'
+  auditFinancialTransaction: 'auditFinancialTransaction',
+  // Alias en MAYÚSCULAS usados por otros módulos
+  VALIDATE_ORDER_ASSIGNMENT: 'validateOrderAssignment',
+  PROCESS_ORDER_COMPLETION: 'processOrderCompletion',
+  HANDLE_ORDER_WORKFLOW: 'handleOrderWorkflow',
+  UPDATE_DRIVER_STATUS: 'updateDriverStatus',
+  PROCESS_WITHDRAWAL: 'processPayment',
+  PROCESS_DEBT_PAYMENT: 'processPayment',
+  SEND_NOTIFICATION: 'sendNotification',
+  GENERATE_WEEKLY_CFDI: 'generateWeeklyCfdi',
+  MONTHLY_DRIVER_CLASSIFICATION: 'monthlyDriverClassification',
+  GENERATE_MONTHLY_IDSE: 'generateMonthlyIdse',
+  TRANSFER_BENEFITS_ONLY: 'transferBenefits',
+  PROCESS_INCIDENT: 'processIncident',
+  NOTIFY_INCIDENT_CLARIFICATION: 'notifyIncidentClarification',
+  INITIATE_FORMAL_REVIEW: 'initiateFormalReview',
+  NOTIFY_DRIVER_SUSPENSION: 'notifyDriverSuspension',
+  PROCESS_DRIVER_DEACTIVATION: 'processDriverDeactivation',
+  NOTIFY_RESCISSION_INTENT: 'notifyRescissionIntent',
 };
 
 export const initializeFirebase = async () => {
@@ -72,7 +93,6 @@ export const initializeFirebase = async () => {
 
 export const setupPushNotifications = async () => {
   try {
-    // Solicitar permisos
     const authStatus = await messaging().requestPermission({
       alert: true,
       announcement: false,
@@ -87,22 +107,17 @@ export const setupPushNotifications = async () => {
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
     if (enabled) {
-      console.log('Authorization status:', authStatus);
-
-      // Obtener token FCM
       const fcmToken = await messaging().getToken();
 
-      if (fcmToken && auth().currentUser) {
-        // Guardar token en Firestore
+      const user = auth().currentUser;
+      if (fcmToken && user) {
         await firestore()
           .collection(COLLECTIONS.DRIVERS)
-          .doc(auth().currentUser.uid)
+          .doc(user.uid)
           .update({
             fcmToken: fcmToken,
             lastTokenUpdate: firestore.FieldValue.serverTimestamp()
           });
-
-        console.log('FCM Token saved:', fcmToken);
       }
     }
   } catch (error) {
@@ -155,4 +170,5 @@ export const setupNotificationListeners = () => {
   };
 };
 
-export { firestore, auth, functions, messaging, storage, setupPushNotifications, setupNotificationListeners };
+// Evitar redeclaración: exportar una sola vez al final
+export { firestore, auth, functions, messaging, storage };

@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, GenerateContentResponse, SchemaType } from "@google/generative-ai";
-import { MapService } from './MapService';
+import MapService from './MapService';
 
 let ai: GoogleGenerativeAI | null = null;
 
@@ -46,8 +46,10 @@ export const getGeminiChatResponse = async (
     try {
         const modelName = useThinkingMode ? 'gemini-1.5-pro' : 'gemini-1.5-flash';
         
-        const tools: any[] = [...MapService.toolsDefinition.functionDeclarations];
-        
+        const tools: any[] = (MapService as any).toolsDefinition?.functionDeclarations
+          ? [...(MapService as any).toolsDefinition.functionDeclarations]
+          : [];
+
         if (useMaps) {
              // En el futuro, podrías añadir herramientas específicas de mapas aquí si las separas
         }
@@ -71,7 +73,9 @@ export const getGeminiChatResponse = async (
 
             if (call.name === 'change_map_style') {
                 try {
-                    const validStyle = MapService.validateStyle(args.jsonStyle);
+                    const validStyle = (MapService as any).validateStyle
+                      ? (MapService as any).validateStyle(args.jsonStyle)
+                      : args.jsonStyle;
                     return {
                         text: "He generado un nuevo estilo para tu mapa. Aplicando cambios...",
                         groundingChunks: [],

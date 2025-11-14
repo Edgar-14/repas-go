@@ -9,7 +9,8 @@ import {
   Image,
   FlatList,
 } from 'react-native';
-import { NavigationProps } from '../types';
+import { StackScreenProps } from '@react-navigation/stack';
+import { RootStackParamList } from '../types';
 
 const { width } = Dimensions.get('window');
 
@@ -53,7 +54,9 @@ const slides: OnboardingSlide[] = [
   },
 ];
 
-const OnboardingScreen: React.FC<NavigationProps> = ({ navigation }) => {
+type OnboardingScreenProps = StackScreenProps<RootStackParamList, 'Onboarding'>;
+
+const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 

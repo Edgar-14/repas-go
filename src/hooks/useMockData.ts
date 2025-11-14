@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import React from 'react';
 import { Driver, Order, ChatMessage, OrderStatus, TransactionType } from '../types';
 
 interface Incentive {
@@ -243,7 +244,7 @@ export const useMockData = () => {
                 snap.forEach((d) => {
                     const data: any = d.data();
                     const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
-                    list.push({
+                    const order: Order = {
                         id: d.id,
                         status: data.status,
                         earnings: data.estimatedEarnings || 0,
@@ -253,7 +254,11 @@ export const useMockData = () => {
                         customer: { name: data.customer?.name || 'Cliente' },
                         timestamps: { created: createdAt },
                         driverId: data.driverId,
-                    });
+                        // compat
+                        ...(data.customerName ? { customerName: data.customerName } : {}),
+                        ...(data.pickupBusiness ? { pickupBusiness: data.pickupBusiness } : {}),
+                    } as any;
+                    list.push(order);
                     if (createdAt >= sevenDaysAgo && (data.status === 'DELIVERED' || data.status === 'COMPLETED')) {
                         earnings += data.estimatedEarnings || 0;
                         trips += 1;
@@ -262,28 +267,7 @@ export const useMockData = () => {
                 setOrders(list);
                 setWeeklySummary({ earnings, trips, hours: 0 });
             });
-
-        const unsubTx = firestore()
-            .collection(COLLECTIONS.WALLET_TRANSACTIONS)
-            .where('driverId', '==', uid)
-            .orderBy('createdAt', 'desc')
-            .limit(20)
-            .onSnapshot((snap) => {
-                const txs: any[] = [];
-                snap.forEach((d) => {
-                    const data: any = d.data();
-                    txs.push({
-                        id: d.id,
-                        type: data.type,
-                        description: data.description || data.type,
-                        amount: data.amount || 0,
-                        date: data.createdAt?.toDate ? data.createdAt.toDate().toLocaleDateString() : '',
-                    });
-                });
-                setTransactions(txs);
-            });
-
-        return () => { unsubDriver(); unsubOrders(); unsubTx(); };
+        return () => { unsubDriver(); unsubOrders(); };
     }, []);
 
     const toggleOnlineStatus = useCallback(async () => {

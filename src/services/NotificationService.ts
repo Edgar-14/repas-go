@@ -1,37 +1,60 @@
-import messaging from '@react-native-firebase/messaging';
-import { store } from '../store';
-import { showNewOrderModal } from '../store/slices/notificationsSlice';
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
+import { store } from '../store';
+import { showNewOrderModal } from '../store/slices/notificationsSlice';
 import { COLLECTIONS } from '../config/firebase';
-    // Request permission
-    const authStatus = await messaging().requestPermission();
+
+class NotificationService {
   private authUnsubscribe: (() => void) | null = null;
 
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+  async initialize(): Promise<void> {
     try {
-      const authStatus = await messaging().requestPermission({
-        alert: true, badge: true, sound: true
-      });
+      const permission = await messaging().requestPermission({ alert: true, badge: true, sound: true });
       const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-    const enabled =
+        permission === messaging.AuthorizationStatus.AUTHORIZED ||
+        permission === messaging.AuthorizationStatus.PROVISIONAL;
+
       if (!enabled) {
         console.warn('Notificaciones no autorizadas por el usuario');
         return;
       }
 
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-      console.log('Foreground message:', remoteMessage);
+      await messaging().registerDeviceForRemoteMessages();
+      await this.syncTokenWithUser();
+      this.subscribeForegroundMessages();
+      this.subscribeNotificationOpen();
+      await this.checkInitialNotification();
       this.subscribeAuthTokenSync();
     } catch (e) {
       console.error('Error inicializando notificaciones:', e);
+    }
+  }
+
+  private subscribeForegroundMessages() {
+    messaging().onMessage(async remoteMessage => {
+      console.log('Foreground message:', remoteMessage);
       this.handleNewOrderNotification(remoteMessage);
     });
+  }
+
+  private subscribeNotificationOpen() {
+    messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('App opened from notification:', remoteMessage);
+      this.handleNewOrderNotification(remoteMessage);
+    });
+  }
+
+  private async checkInitialNotification() {
+    const initialNotification = await messaging().getInitialNotification();
+    if (initialNotification) {
+      console.log('Initial notification:', initialNotification);
+      this.handleNewOrderNotification(initialNotification);
+    }
+  }
 
   private subscribeAuthTokenSync() {
-    // Mantener token actualizado en Firestore cuando hay usuario
+    if (this.authUnsubscribe) this.authUnsubscribe();
     this.authUnsubscribe = auth().onAuthStateChanged(async user => {
       if (!user) return;
       try {
@@ -40,27 +63,40 @@ import { COLLECTIONS } from '../config/firebase';
         await firestore()
           .collection(COLLECTIONS.DRIVERS)
           .doc(user.uid)
-          .set({
-            fcmToken: token,
-            lastTokenUpdate: firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+          .set(
+            {
+              fcmToken: token,
+              lastTokenUpdate: firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          );
         console.log('FCM token sincronizado para usuario', user.uid);
       } catch (err) {
         console.warn('Error sincronizando token FCM:', err);
       }
     });
   }
-    if (enabled) {
-    });
 
-    // App opened from notification
-    messaging().onNotificationOpenedApp(remoteMessage => {
-
-    // Check if app was opened from a notification (killed state)
-    const initialNotification = await messaging().getInitialNotification();
-    if (initialNotification) {
-      console.log('Initial notification:', initialNotification);
-      this.handleNewOrderNotification(initialNotification);
+  private async syncTokenWithUser() {
+    const user = auth().currentUser;
+    if (!user) return;
+    try {
+      const token = await messaging().getToken();
+      if (!token) return;
+      await firestore()
+        .collection(COLLECTIONS.DRIVERS)
+        .doc(user.uid)
+        .set(
+          {
+            fcmToken: token,
+            lastTokenUpdate: firestore.FieldValue.serverTimestamp()
+          },
+          { merge: true }
+        );
+    } catch (err) {
+      console.warn('No se pudo sincronizar el token inicial:', err);
+    }
+  }
 
   async getToken() {
     try {
@@ -68,9 +104,30 @@ import { COLLECTIONS } from '../config/firebase';
       console.log('FCM Token:', token);
       return token;
     } catch (error) {
-      console.error('Error getting FCM token:', error);
+      console.error('Error obteniendo token FCM:', error);
       return null;
-    // Check killed state
+    }
+  }
+
+  private handleNewOrderNotification(remoteMessage: FirebaseMessagingTypes.RemoteMessage | null) {
+    if (!remoteMessage?.data) return;
+
+    const { orderId, customerName, pickupAddress, dropoffAddress } = remoteMessage.data;
+    if (!orderId) return;
+
+    store.dispatch(
+      showNewOrderModal({
+        id: String(orderId),
+        storeName: String(customerName || 'Cliente'),
+        pickupAddress: typeof pickupAddress === 'string' ? pickupAddress : JSON.stringify(pickupAddress || {}),
+        deliveryAddress: typeof dropoffAddress === 'string' ? dropoffAddress : JSON.stringify(dropoffAddress || {}),
+        total: 0,
+        paymentMethod: 'CARD',
+        distanceKm: 0,
+        deliveryFee: 0,
+        tip: 0,
+      })
+    );
   }
 }
 

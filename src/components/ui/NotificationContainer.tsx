@@ -2,21 +2,20 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Notification } from '../../types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useNotification } from '../../App';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface NotificationContainerProps {
     notifications: Notification[];
+    onRemove?: (id: string) => void;
 }
 
-const icons = {
-    success: <CheckCircle color="#27ae60" />,
-    error: <XCircle color="#D63031" />,
-    info: <Info color="#2980b9" />,
+const iconName: Record<Notification['type'], string> = {
+    success: 'check-circle-outline',
+    error: 'close-circle-outline',
+    info: 'information-outline',
 };
 
-const NotificationToast: React.FC<{ notification: Notification }> = ({ notification }) => {
-    const { removeNotification } = useNotification();
+const NotificationToast: React.FC<{ notification: Notification; onRemove?: (id: string) => void }> = ({ notification, onRemove }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -31,29 +30,29 @@ const NotificationToast: React.FC<{ notification: Notification }> = ({ notificat
                 toValue: 0,
                 duration: 300,
                 useNativeDriver: true,
-            }).start(() => removeNotification(notification.id));
+            }).start(() => onRemove?.(notification.id));
         }, 4000); // Notification stays for 4 seconds before auto-fading
 
         return () => clearTimeout(timer);
-    }, [fadeAnim, notification.id, removeNotification]);
+    }, [fadeAnim, notification.id, onRemove]);
 
     return (
         <Animated.View style={[styles.toastContainer, { opacity: fadeAnim }]}>
-            <View style={styles.iconContainer}>{icons[notification.type]}</View>
+            <MaterialCommunityIcons name={iconName[notification.type]} size={20} color={notification.type === 'error' ? '#D63031' : notification.type === 'success' ? '#27ae60' : '#2980b9'} style={styles.iconContainer} />
             <Text style={styles.messageText}>{notification.message}</Text>
-            <TouchableOpacity onPress={() => removeNotification(notification.id)}>
-                <X size={16} color="#A0AEC0" />
+            <TouchableOpacity onPress={() => onRemove?.(notification.id)}>
+                <MaterialCommunityIcons name="close" size={16} color="#A0AEC0" />
             </TouchableOpacity>
         </Animated.View>
     );
 };
 
-const NotificationContainer: React.FC<NotificationContainerProps> = ({ notifications }) => {
+const NotificationContainer: React.FC<NotificationContainerProps> = ({ notifications, onRemove }) => {
     const insets = useSafeAreaInsets();
     return (
         <View style={[styles.container, { top: insets.top || 10 }]}>
             {notifications.map(n => (
-                <NotificationToast key={n.id} notification={n} />
+                <NotificationToast key={n.id} notification={n} onRemove={onRemove} />
             ))}
         </View>
     );

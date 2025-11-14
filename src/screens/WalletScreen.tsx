@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Pla
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList, TransactionType, WalletTransaction } from '../types/index'; // Importar tipos unificados
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store'; // Importar AppDispatch
 import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
@@ -24,7 +24,7 @@ const ArrowDownCircle = (props: { color: string, size?: number }) => <MaterialCo
 const DollarSign = (props: { color: string, size?: number }) => <MaterialCommunityIcons name="currency-usd" size={props.size || 24} color={props.color} />;
 // --- FIN DE CORRECCIÓN DE ICONOS ---
 
-type WalletScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Wallet'>;
+type WalletScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
 
 const WalletScreen: React.FC = () => {
     // CORRECCIÓN: Usar AppDispatch y RootState

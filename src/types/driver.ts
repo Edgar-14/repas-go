@@ -79,7 +79,7 @@ deliveryInstructions?: string;
 }
 
 export interface OrderRestaurant {
-name: string;
+name:string;
 address: string;
 phoneNumber: string;
 coordinates: LatLng;
@@ -200,7 +200,7 @@ export function adaptOrderForLegacy(order: OrderDocument): LegacyOrder {
     createdDate = rawCreated;
   } else {
     // Fallback por si es un string u otro tipo (aunque no debería)
-    createdDate = rawCreated ? new Date(rawCreated) : new Date();
+    createdDate = rawCreated ? new Date(rawCreated as any) : new Date();
   }
 
   return {

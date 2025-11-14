@@ -93,11 +93,10 @@ android {
         versionName = "1.0.0"
         manifestPlaceholders = [
             usesCleartextTraffic: true,
-            // Mapea el placeholder que usa el AndroidManifest a la key del plugin de secretos
-            "com.google.android.geo.API_KEY": project.findProperty("MAPS_API_KEY") ?: System.getenv("MAPS_API_KEY") ?: ""
+            GOOGLE_MAPS_API_KEY: project.findProperty("MAPS_API_KEY") ?: System.getenv("MAPS_API_KEY") ?: "${MAPS_API_KEY}" ?: ""
         ]
         multiDexEnabled = true
-        // Limitar recursos de idiomas durante desarrollo
+        // Limitar recursos de idiomas durante desenvolvimento
         resConfigs("es")
     }
     signingConfigs {
@@ -130,8 +129,8 @@ android {
 
     compileOptions {
         coreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 

@@ -12,7 +12,7 @@ class CloudFunctionsService {
   // Validar asignación de pedido
   async validateOrderAssignment(orderId: string, driverId: string): Promise<CloudFunctionResponse> {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.VALIDATE_ORDER_ASSIGNMENT)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.validateOrderAssignment)({
         orderId,
         driverId,
         action: 'ACCEPT'
@@ -40,7 +40,7 @@ class CloudFunctionsService {
     }
   ): Promise<CloudFunctionResponse> {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.PROCESS_ORDER_COMPLETION)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.processOrderCompletion)({
         orderId,
         driverId,
         ...completionData,
@@ -64,7 +64,7 @@ class CloudFunctionsService {
     additionalData?: any
   ): Promise<CloudFunctionResponse> {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.HANDLE_ORDER_WORKFLOW)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.handleOrderWorkflow)({
         orderId,
         driverId,
         newStatus,
@@ -88,7 +88,7 @@ class CloudFunctionsService {
     location?: { latitude: number; longitude: number }
   ): Promise<CloudFunctionResponse> {
     try {
-      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.UPDATE_DRIVER_STATUS)({
+      const result = await functions().httpsCallable(CLOUD_FUNCTIONS.updateDriverStatus)({
         driverId,
         status,
         location,
