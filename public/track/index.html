@@ -3,355 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BeFast - Tracking en Tiempo Real</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 18px;
-            opacity: 0.9;
-        }
-
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 16px;
-        }
-
-        .order-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .order-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .order-status {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .status-in-transit {
-            background: #E3F2FD;
-            color: #1976D2;
-        }
-
-        .map-container {
-            height: 400px;
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            background: #E0E0E0;
-            position: relative;
-        }
-
-        #map {
-            width: 100%;
-            height: 100%;
-        }
-
-        .live-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-        }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: #4CAF50;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .eta-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 16px;
-            border-radius: 12px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .eta-badge .time {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .eta-badge .label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .driver-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .driver-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .driver-details h3 {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .driver-rating {
-            color: #FFA000;
-            font-size: 16px;
-        }
-
-        .timeline {
-            position: relative;
-            padding-left: 40px;
-        }
-
-        .timeline-item {
-            position: relative;
-            padding-bottom: 30px;
-        }
-
-        .timeline-item:last-child {
-            padding-bottom: 0;
-        }
-
-        .timeline-dot {
-            position: absolute;
-            left: -30px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            border: 3px solid #E0E0E0;
-            background: white;
-        }
-
-        .timeline-dot.completed {
-            border-color: #4CAF50;
-            background: #4CAF50;
-        }
-
-        .timeline-dot.current {
-            border-color: #667eea;
-            background: #667eea;
-            animation: pulse 2s infinite;
-        }
-
-        .timeline-line {
-            position: absolute;
-            left: -23px;
-            top: 16px;
-            width: 2px;
-            height: calc(100% - 16px);
-            background: #E0E0E0;
-        }
-
-        .timeline-line.completed {
-            background: #4CAF50;
-        }
-
-        .timeline-content h4 {
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .timeline-content p {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: white;
-        }
-
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .error {
-            text-align: center;
-            padding: 60px 20px;
-            color: white;
-        }
-
-        .error-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
-            
-            .map-container {
-                height: 300px;
-            }
-            
-            .eta-badge .time {
-                font-size: 24px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 BeFast Tracking</h1>
-            <p>Rastrea tu pedido en tiempo real</p>
-        </div>
-
-        <div id="loading" class="loading">
-            <div class="loading-spinner"></div>
-            <h2>Cargando información del pedido...</h2>
-        </div>
-
-        <div id="error" class="error" style="display: none;">
-            <div class="error-icon">❌</div>
-            <h2>Pedido no encontrado</h2>
-            <p>Verifica el link de tracking</p>
-        </div>
-
-        <div id="content" style="display: none;">
-            <!-- Información del pedido -->
-            <div class="card">
-                <div class="order-info">
-                    <div>
-                        <div class="order-number" id="orderNumber">#12345678</div>
-                        <p style="color: #666; margin-top: 8px;" id="businessName">Restaurante</p>
-                    </div>
-                    <div class="order-status status-in-transit" id="orderStatus">En camino</div>
-                </div>
-            </div>
-
-            <!-- ETA Badge -->
-            <div id="etaBadge" class="eta-badge" style="display: none;">
-                <div class="time" id="etaTime">12</div>
-                <div class="label">minutos estimados</div>
-            </div>
-
-            <!-- Mapa -->
-            <div id="mapSection" class="map-container" style="display: none;">
-                <div class="live-indicator">
-                    <div class="live-dot"></div>
-                    <span style="font-size: 12px; font-weight: 600; color: #333;">En vivo</span>
-                </div>
-                <div id="map"></div>
-            </div>
-
-            <!-- Información del conductor -->
-            <div id="driverCard" class="card" style="display: none;">
-                <div class="card-title">👤 Tu repartidor</div>
-                <div class="driver-info">
-                    <div class="driver-avatar" id="driverAvatar">JD</div>
-                    <div class="driver-details">
-                        <h3 id="driverName">Juan Domínguez</h3>
-                        <div class="driver-rating" id="driverRating">⭐ 4.8</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Timeline de estados -->
-            <div class="card">
-                <div class="card-title">📋 Progreso del pedido</div>
-                <div class="timeline" id="timeline">
-                    <!-- Timeline items will be injected here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <title>Rastrea tu Pedido - BeFast GO</title>
+    <meta name="description" content="Rastrea tu pedido en tiempo real con BeFast GO">
+    <meta name="theme-color" content="#00B894">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/Favicon/favicon-32x32.png">
+    
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_MAPS_API_KEY&libraries=geometry"></script>
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     
-    <!-- Google Maps -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY"></script>
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="/Favicon/favicon-96x96.png" alt="BeFast GO" width="40" height="40">
+                <h1>BeFast GO</h1>
+            </div>
+        </div>
+    </header>
 
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Loading State -->
+            <div id="loading" class="loading-state">
+                <div class="spinner"></div>
+                <p>Cargando información de tu pedido...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error" class="error-state" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h2>Pedido no encontrado</h2>
+                <p>No pudimos encontrar información para este pedido. Por favor verifica el enlace o contacta con soporte.</p>
+            </div>
+
+            <!-- Order Info -->
+            <div id="orderInfo" class="order-info" style="display: none;">
+                <!-- Order Header -->
+                <div class="order-header">
+                    <div class="order-number">
+                        <span class="label">Pedido</span>
+                        <span id="orderNumber" class="value">#12345678</span>
+                    </div>
+                    <div class="order-status">
+                        <span id="orderStatusBadge" class="status-badge">En camino</span>
+                    </div>
+                </div>
+
+                <!-- Map Container -->
+                <div class="map-container">
+                    <div id="map" class="map"></div>
+                    <div class="live-indicator">
+                        <span class="live-dot"></span>
+                        <span>En vivo</span>
+                    </div>
+                </div>
+
+                <!-- ETA Info -->
+                <div id="etaInfo" class="eta-info">
+                    <div class="eta-item">
+                        <span class="eta-icon">🕐</span>
+                        <div class="eta-content">
+                            <span class="eta-label">Tiempo estimado</span>
+                            <span id="etaTime" class="eta-value">15 min</span>
+                        </div>
+                    </div>
+                    <div class="eta-item">
+                        <span class="eta-icon">📍</span>
+                        <div class="eta-content">
+                            <span class="eta-label">Distancia</span>
+                            <span id="etaDistance" class="eta-value">2.5 km</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline">
+                    <h3>Estado del pedido</h3>
+                    <div class="timeline-list">
+                        <div id="timeline-searching" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">Buscando repartidor</span>
+                                <span class="timeline-time" id="time-searching">--</span>
+                            </div>
+                        </div>
+                        <div id="timeline-assigned" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">Repartidor asignado</span>
+                                <span class="timeline-time" id="time-assigned">--</span>
+                            </div>
+                        </div>
+                        <div id="timeline-started" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">En camino al restaurante</span>
+                                <span class="timeline-time" id="time-started">--</span>
+                            </div>
+                        </div>
+                        <div id="timeline-picked-up" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">Pedido recogido</span>
+                                <span class="timeline-time" id="time-picked-up">--</span>
+                            </div>
+                        </div>
+                        <div id="timeline-in-transit" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">En camino a tu ubicación</span>
+                                <span class="timeline-time" id="time-in-transit">--</span>
+                            </div>
+                        </div>
+                        <div id="timeline-arrived" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">Repartidor llegó</span>
+                                <span class="timeline-time" id="time-arrived">--</span>
+                            </div>
+                        </div>
+                        <div id="timeline-delivered" class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <span class="timeline-title">Pedido entregado</span>
+                                <span class="timeline-time" id="time-delivered">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Driver Info -->
+                <div id="driverInfo" class="driver-info" style="display: none;">
+                    <h3>Tu repartidor</h3>
+                    <div class="driver-card">
+                        <div class="driver-avatar">
+                            <span id="driverInitials">JD</span>
+                        </div>
+                        <div class="driver-details">
+                            <span id="driverName" class="driver-name">Juan Domínguez</span>
+                            <div class="driver-rating">
+                                <span class="star">⭐</span>
+                                <span id="driverRating" class="rating-value">4.8</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Details -->
+                <div class="order-details">
+                    <h3>Detalles del pedido</h3>
+                    <div class="detail-row">
+                        <span class="detail-label">🏪 De:</span>
+                        <span id="businessName" class="detail-value">Don Tacos</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">📍 A:</span>
+                        <span id="deliveryAddress" class="detail-value">Calle Principal 123</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">💳 Pago:</span>
+                        <span id="paymentMethod" class="detail-value">Efectivo</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">💰 Total:</span>
+                        <span id="totalAmount" class="detail-value">$250.00 MXN</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 BeFast GO. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Tracking Script -->
     <script src="tracking.js"></script>
 </body>
 </html>

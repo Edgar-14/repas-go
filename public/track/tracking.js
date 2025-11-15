@@ -1,14 +1,18 @@
-// Tracking en tiempo real para clientes - BeFast GO
-// Basado en TRACKING_PAGE_SPECS.md
+/**
+ * tracking.js
+ * 
+ * Script para la página pública de tracking que se conecta al Firestore
+ * existente del ecosistema BeFast para mostrar tracking en tiempo real.
+ */
 
-// Configuración de Firebase
+// Configuración de Firebase - usar las mismas credenciales del ecosistema
 const firebaseConfig = {
-    apiKey: "AIzaSyBqJxKuoZ8X7X7X7X7X7X7X7X7X7X7X7X7",
+    apiKey: "AIzaSyAEFo3RDFvqw0-HuSOOBD34NGruHI3hIBQ",
     authDomain: "befast-hfkbl.firebaseapp.com",
     projectId: "befast-hfkbl",
-    storageBucket: "befast-hfkbl.appspot.com",
-    messagingSenderId: "897579485656",
-    appId: "1:897579485656:web:abc123def456"
+    storageBucket: "befast-hfkbl.firebasestorage.app",
+    messagingSenderId: "1031006329166",
+    appId: "1:1031006329166:web:aa77e24c7a5ee51f1a1989"
 };
 
 // Inicializar Firebase
@@ -16,379 +20,377 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // Variables globales
-let map = null;
-let driverMarker = null;
-let destinationMarker = null;
-let routeLine = null;
-let unsubscribeOrder = null;
-let unsubscribeDriver = null;
+let map;
+let driverMarker;
+let pickupMarker;
+let deliveryMarker;
+let routePolyline;
+let orderUnsubscribe;
+let driverUnsubscribe;
 
-// Estados de pedido
-const OrderStatus = {
-    PENDING: 'PENDING',
-    SEARCHING: 'SEARCHING',
-    ASSIGNED: 'ASSIGNED',
-    ACCEPTED: 'ACCEPTED',
-    PICKED_UP: 'PICKED_UP',
-    IN_TRANSIT: 'IN_TRANSIT',
-    ARRIVED: 'ARRIVED',
-    DELIVERED: 'DELIVERED',
-    COMPLETED: 'COMPLETED',
-    FAILED: 'FAILED',
-    CANCELLED: 'CANCELLED'
-};
-
-// Obtener orderId de la URL
-function getOrderIdFromUrl() {
-    const urlParts = window.location.pathname.split('/');
-    return urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
+/**
+ * Obtener orderId de la URL
+ */
+function getOrderIdFromURL() {
+    const pathParts = window.location.pathname.split('/');
+    return pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
 }
 
-// Inicializar tracking
-async function initializeTracking() {
-    const orderId = getOrderIdFromUrl();
-    
-    if (!orderId) {
-        showError('ID de pedido no encontrado en la URL');
-        return;
-    }
-
-    console.log('Tracking order:', orderId);
-
-    // Escuchar cambios del pedido en tiempo real
-    unsubscribeOrder = db.collection('orders').doc(orderId)
-        .onSnapshot(
-            (doc) => {
-                if (!doc.exists) {
-                    showError('Pedido no encontrado');
-                    return;
-                }
-
-                const order = { id: doc.id, ...doc.data() };
-                console.log('Order data:', order);
-                updateUI(order);
-
-                // Si tiene conductor, escuchar su ubicación
-                if (order.driverId) {
-                    listenToDriverLocation(order.driverId, order);
-                }
-            },
-            (error) => {
-                console.error('Error loading order:', error);
-                showError('Error de conexión. Por favor recarga la página.');
-            }
-        );
-}
-
-// Actualizar UI con datos del pedido
-function updateUI(order) {
-    // Ocultar loading, mostrar contenido
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
-
-    // Información básica
-    const orderNumber = order.orderNumber || order.id.slice(-8);
-    document.getElementById('orderNumber').textContent = `#${orderNumber}`;
-    document.getElementById('businessName').textContent = order.pickup?.businessName || 'Restaurante';
-    document.getElementById('orderStatus').textContent = getStatusText(order.status);
-
-    // Mostrar mapa solo si está en tránsito o llegado
-    const showMap = (order.status === OrderStatus.IN_TRANSIT || order.status === OrderStatus.ARRIVED) 
-                    && order.driverId 
-                    && order.delivery?.coordinates;
-    
-    const mapSection = document.getElementById('mapSection');
-    mapSection.style.display = showMap ? 'block' : 'none';
-
-    if (showMap && !map) {
-        initializeMap(order);
-    }
-
-    // Mostrar ETA
-    const showETA = order.status === OrderStatus.IN_TRANSIT || order.status === OrderStatus.ARRIVED;
-    const etaBadge = document.getElementById('etaBadge');
-    etaBadge.style.display = showETA ? 'block' : 'none';
-    
-    if (showETA && order.estimatedDeliveryTime) {
-        updateETA(order.estimatedDeliveryTime);
-    }
-
-    // Timeline
-    updateTimeline(order);
-}
-
-// Escuchar ubicación del conductor en tiempo real
-function listenToDriverLocation(driverId, order) {
-    // Cancelar listener anterior si existe
-    if (unsubscribeDriver) {
-        unsubscribeDriver();
-    }
-
-    unsubscribeDriver = db.collection('drivers').doc(driverId)
-        .onSnapshot(
-            (doc) => {
-                if (!doc.exists) return;
-
-                const driver = doc.data();
-                console.log('Driver data:', driver);
-
-                // Actualizar info del conductor
-                updateDriverInfo({
-                    name: driver.personalData?.fullName || 'Repartidor',
-                    rating: driver.stats?.rating || 0
-                });
-
-                // Actualizar ubicación en el mapa
-                const location = driver.operational?.currentLocation;
-                if (location && map) {
-                    updateDriverMarkerOnMap(location, order.delivery.coordinates);
-                }
-            },
-            (error) => {
-                console.error('Error loading driver location:', error);
-            }
-        );
-}
-
-// Inicializar Google Maps
-function initializeMap(order) {
-    const deliveryCoords = {
-        lat: order.delivery.coordinates.latitude,
-        lng: order.delivery.coordinates.longitude
-    };
-
+/**
+ * Inicializar mapa de Google Maps
+ */
+function initMap(lat = 19.4326, lng = -99.1332) {
     map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat, lng },
         zoom: 14,
-        center: deliveryCoords,
-        styles: [
-            {
-                featureType: 'poi',
-                elementType: 'labels',
-                stylers: [{ visibility: 'off' }]
-            }
-        ],
         disableDefaultUI: false,
         zoomControl: true,
         mapTypeControl: false,
         streetViewControl: false,
-        fullscreenControl: true
-    });
-
-    // Marcador del destino
-    destinationMarker = new google.maps.Marker({
-        position: deliveryCoords,
-        map: map,
-        title: 'Tu ubicación',
-        icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: '#4CAF50',
-            fillOpacity: 1,
-            strokeColor: '#FFFFFF',
-            strokeWeight: 2
-        }
+        fullscreenControl: false,
+        styles: [
+            {
+                featureType: 'poi',
+                stylers: [{ visibility: 'off' }]
+            }
+        ]
     });
 }
 
-// Actualizar marcador del conductor en el mapa
-function updateDriverMarkerOnMap(driverLocation, destinationCoords) {
-    if (!map) return;
-
-    const driverPos = {
-        lat: driverLocation.latitude,
-        lng: driverLocation.longitude
-    };
-
-    // Crear o actualizar marcador del conductor
-    if (!driverMarker) {
+/**
+ * Crear marcador del conductor
+ */
+function createDriverMarker(lat, lng) {
+    if (driverMarker) {
+        driverMarker.setPosition({ lat, lng });
+    } else {
         driverMarker = new google.maps.Marker({
-            position: driverPos,
+            position: { lat, lng },
             map: map,
             title: 'Repartidor',
             icon: {
-                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                scale: 5,
-                fillColor: '#667eea',
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: '#00B894',
                 fillOpacity: 1,
                 strokeColor: '#FFFFFF',
-                strokeWeight: 2,
-                rotation: 0
+                strokeWeight: 3
             },
-            animation: google.maps.Animation.DROP
+            zIndex: 1000
         });
-    } else {
-        driverMarker.setPosition(driverPos);
+    }
+}
+
+/**
+ * Crear marcador de pickup
+ */
+function createPickupMarker(lat, lng, title) {
+    if (pickupMarker) {
+        pickupMarker.setMap(null);
     }
 
-    // Actualizar o crear línea de ruta
-    const destPos = {
-        lat: destinationCoords.latitude,
-        lng: destinationCoords.longitude
-    };
-
-    if (!routeLine) {
-        routeLine = new google.maps.Polyline({
-            path: [driverPos, destPos],
-            strokeColor: '#667eea',
-            strokeOpacity: 1.0,
-            strokeWeight: 4,
-            map: map
-        });
-    } else {
-        routeLine.setPath([driverPos, destPos]);
-    }
-
-    // Ajustar el mapa para mostrar ambos marcadores
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend(driverPos);
-    bounds.extend(destPos);
-    map.fitBounds(bounds);
-}
-
-// Actualizar información del conductor
-function updateDriverInfo(driver) {
-    const driverCard = document.getElementById('driverCard');
-    driverCard.style.display = 'block';
-
-    // Avatar con iniciales
-    const nameParts = driver.name.split(' ');
-    const initials = nameParts.map(p => p.charAt(0)).join('').substring(0, 2);
-    document.getElementById('driverAvatar').textContent = initials;
-    
-    document.getElementById('driverName').textContent = driver.name;
-    document.getElementById('driverRating').textContent = `⭐ ${driver.rating.toFixed(1)}`;
-}
-
-// Actualizar ETA
-function updateETA(estimatedDeliveryTime) {
-    if (!estimatedDeliveryTime) return;
-
-    const eta = estimatedDeliveryTime.toDate();
-    const now = new Date();
-    const minutesLeft = Math.round((eta - now) / 60000);
-
-    const etaText = minutesLeft > 0 ? minutesLeft : '<1';
-    document.getElementById('etaTime').textContent = etaText;
-}
-
-// Actualizar timeline
-function updateTimeline(order) {
-    const timeline = document.getElementById('timeline');
-    timeline.innerHTML = '';
-
-    const timelineSteps = [
-        { status: OrderStatus.PENDING, label: 'Pendiente', icon: '⏳' },
-        { status: OrderStatus.SEARCHING, label: 'Buscando repartidor', icon: '🔍' },
-        { status: OrderStatus.ASSIGNED, label: 'Repartidor asignado', icon: '👤' },
-        { status: OrderStatus.ACCEPTED, label: 'Pedido aceptado', icon: '✅' },
-        { status: OrderStatus.PICKED_UP, label: 'Recogido', icon: '📦' },
-        { status: OrderStatus.IN_TRANSIT, label: 'En camino', icon: '🚚' },
-        { status: OrderStatus.ARRIVED, label: 'Llegó a tu ubicación', icon: '📍' },
-        { status: OrderStatus.DELIVERED, label: 'Entregado', icon: '🎉' }
-    ];
-
-    const currentStatusIndex = timelineSteps.findIndex(s => s.status === order.status);
-
-    timelineSteps.forEach((step, index) => {
-        const item = document.createElement('div');
-        item.className = 'timeline-item';
-
-        const dot = document.createElement('div');
-        dot.className = 'timeline-dot';
-        
-        if (index < currentStatusIndex) {
-            dot.classList.add('completed');
-        } else if (index === currentStatusIndex) {
-            dot.classList.add('current');
-        }
-
-        const content = document.createElement('div');
-        content.className = 'timeline-content';
-
-        const title = document.createElement('h4');
-        title.textContent = `${step.icon} ${step.label}`;
-
-        const timestamp = document.createElement('p');
-        const time = getTimestampForStatus(order, step.status);
-        timestamp.textContent = time || '';
-
-        content.appendChild(title);
-        if (time) content.appendChild(timestamp);
-
-        item.appendChild(dot);
-        item.appendChild(content);
-
-        // Línea conectora
-        if (index < timelineSteps.length - 1) {
-            const line = document.createElement('div');
-            line.className = 'timeline-line';
-            if (index < currentStatusIndex) {
-                line.classList.add('completed');
-            }
-            item.appendChild(line);
-        }
-
-        timeline.appendChild(item);
+    pickupMarker = new google.maps.Marker({
+        position: { lat, lng },
+        map: map,
+        title: title || 'Restaurante',
+        label: {
+            text: '🏪',
+            fontSize: '24px'
+        },
+        zIndex: 500
     });
 }
 
-// Obtener timestamp para un estado específico
-function getTimestampForStatus(order, status) {
-    if (!order.timestamps) return null;
+/**
+ * Crear marcador de delivery
+ */
+function createDeliveryMarker(lat, lng, title) {
+    if (deliveryMarker) {
+        deliveryMarker.setMap(null);
+    }
 
+    deliveryMarker = new google.maps.Marker({
+        position: { lat, lng },
+        map: map,
+        title: title || 'Tu ubicación',
+        label: {
+            text: '📍',
+            fontSize: '24px'
+        },
+        zIndex: 500
+    });
+}
+
+/**
+ * Ajustar mapa para mostrar todos los marcadores
+ */
+function fitMapToMarkers() {
+    const bounds = new google.maps.LatLngBounds();
+
+    if (driverMarker) bounds.extend(driverMarker.getPosition());
+    if (pickupMarker) bounds.extend(pickupMarker.getPosition());
+    if (deliveryMarker) bounds.extend(deliveryMarker.getPosition());
+
+    if (!bounds.isEmpty()) {
+        map.fitBounds(bounds);
+        
+        // Ajustar zoom si está muy cerca
+        const listener = google.maps.event.addListener(map, 'idle', function() {
+            if (map.getZoom() > 16) map.setZoom(16);
+            google.maps.event.removeListener(listener);
+        });
+    }
+}
+
+/**
+ * Formatear timestamp de Firestore a hora legible
+ */
+function formatTime(timestamp) {
+    if (!timestamp) return '--';
+    
+    let date;
+    if (timestamp.toDate) {
+        date = timestamp.toDate();
+    } else if (timestamp instanceof Date) {
+        date = timestamp;
+    } else {
+        return '--';
+    }
+
+    return date.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+/**
+ * Actualizar estado del timeline
+ */
+function updateTimeline(status, timing) {
+    // Resetear todos los estados
+    document.querySelectorAll('.timeline-item').forEach(item => {
+        item.classList.remove('active', 'completed');
+    });
+
+    // Mapeo de estados a timeline items
     const statusMap = {
-        [OrderStatus.PENDING]: 'created',
-        [OrderStatus.SEARCHING]: 'created',
-        [OrderStatus.ASSIGNED]: 'assigned',
-        [OrderStatus.ACCEPTED]: 'accepted',
-        [OrderStatus.PICKED_UP]: 'pickedUp',
-        [OrderStatus.IN_TRANSIT]: 'inTransit',
-        [OrderStatus.ARRIVED]: 'arrived',
-        [OrderStatus.DELIVERED]: 'delivered'
+        'SEARCHING': ['searching'],
+        'ASSIGNED': ['searching', 'assigned'],
+        'ACCEPTED': ['searching', 'assigned'],
+        'STARTED': ['searching', 'assigned', 'started'],
+        'PICKED_UP': ['searching', 'assigned', 'started', 'picked-up'],
+        'IN_TRANSIT': ['searching', 'assigned', 'started', 'picked-up', 'in-transit'],
+        'ARRIVED': ['searching', 'assigned', 'started', 'picked-up', 'in-transit', 'arrived'],
+        'DELIVERED': ['searching', 'assigned', 'started', 'picked-up', 'in-transit', 'arrived', 'delivered'],
+        'COMPLETED': ['searching', 'assigned', 'started', 'picked-up', 'in-transit', 'arrived', 'delivered']
     };
 
-    const timestampField = statusMap[status];
-    if (!timestampField || !order.timestamps[timestampField]) return null;
+    const activeStages = statusMap[status] || [];
+    const currentStage = activeStages[activeStages.length - 1];
 
-    const timestamp = order.timestamps[timestampField].toDate();
-    return timestamp.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-}
+    // Marcar etapas completadas y activa
+    activeStages.forEach((stage, index) => {
+        const item = document.getElementById(`timeline-${stage}`);
+        if (item) {
+            if (index < activeStages.length - 1) {
+                item.classList.add('completed');
+            } else {
+                item.classList.add('active');
+            }
+        }
+    });
 
-// Obtener texto del estado
-function getStatusText(status) {
-    const statusTexts = {
-        [OrderStatus.PENDING]: '⏳ Pendiente',
-        [OrderStatus.SEARCHING]: '🔍 Buscando repartidor',
-        [OrderStatus.ASSIGNED]: '👤 Repartidor asignado',
-        [OrderStatus.ACCEPTED]: '✅ Aceptado',
-        [OrderStatus.PICKED_UP]: '📦 Recogido',
-        [OrderStatus.IN_TRANSIT]: '🚚 En camino',
-        [OrderStatus.ARRIVED]: '📍 En tu ubicación',
-        [OrderStatus.DELIVERED]: '🎉 Entregado',
-        [OrderStatus.COMPLETED]: '✨ Completado',
-        [OrderStatus.FAILED]: '❌ Fallido',
-        [OrderStatus.CANCELLED]: '🚫 Cancelado'
+    // Actualizar tiempos
+    if (timing) {
+        if (timing.assignedAt) {
+            document.getElementById('time-assigned').textContent = formatTime(timing.assignedAt);
+        }
+        if (timing.startedAt) {
+            document.getElementById('time-started').textContent = formatTime(timing.startedAt);
+        }
+        if (timing.pickedUpAt) {
+            document.getElementById('time-picked-up').textContent = formatTime(timing.pickedUpAt);
+        }
+        if (timing.arrivedAt) {
+            document.getElementById('time-arrived').textContent = formatTime(timing.arrivedAt);
+        }
+        if (timing.deliveredAt) {
+            document.getElementById('time-delivered').textContent = formatTime(timing.deliveredAt);
+        }
+    }
+
+    // Actualizar badge de estado
+    const statusBadge = document.getElementById('orderStatusBadge');
+    const statusLabels = {
+        'SEARCHING': 'Buscando repartidor',
+        'ASSIGNED': 'Repartidor asignado',
+        'ACCEPTED': 'Pedido aceptado',
+        'STARTED': 'En camino al restaurante',
+        'PICKED_UP': 'Pedido recogido',
+        'IN_TRANSIT': 'En camino',
+        'ARRIVED': 'Repartidor llegó',
+        'DELIVERED': 'Entregado',
+        'COMPLETED': 'Completado'
     };
-
-    return statusTexts[status] || status;
+    statusBadge.textContent = statusLabels[status] || status;
 }
 
-// Mostrar error
-function showError(message) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'block';
-    document.getElementById('error').querySelector('p').textContent = message;
+/**
+ * Actualizar información del pedido en la UI
+ */
+function updateOrderInfo(orderData) {
+    // Order Number
+    document.getElementById('orderNumber').textContent = `#${orderData.orderNumber || 'N/A'}`;
+
+    // Business Name
+    document.getElementById('businessName').textContent = orderData.restaurant?.name || 'Restaurante';
+
+    // Delivery Address
+    document.getElementById('deliveryAddress').textContent = orderData.customer?.address || 'Dirección no disponible';
+
+    // Payment Method
+    const paymentMethod = orderData.paymentMethod === 'CARD' ? 'Tarjeta' : 'Efectivo';
+    document.getElementById('paymentMethod').textContent = paymentMethod;
+
+    // Total Amount
+    const total = orderData.pricing?.totalAmount || 0;
+    document.getElementById('totalAmount').textContent = `$${total.toFixed(2)} MXN`;
+
+    // Timeline
+    updateTimeline(orderData.status, orderData.timing);
+
+    // Marcadores del mapa
+    if (orderData.restaurant?.coordinates) {
+        createPickupMarker(
+            orderData.restaurant.coordinates.lat,
+            orderData.restaurant.coordinates.lng,
+            orderData.restaurant.name
+        );
+    }
+
+    if (orderData.customer?.coordinates) {
+        createDeliveryMarker(
+            orderData.customer.coordinates.lat,
+            orderData.customer.coordinates.lng,
+            'Tu ubicación'
+        );
+    }
+
+    // ETA y distancia (si están disponibles)
+    if (orderData.logistics) {
+        if (orderData.logistics.estimatedDuration) {
+            document.getElementById('etaTime').textContent = `${Math.round(orderData.logistics.estimatedDuration)} min`;
+        }
+        if (orderData.logistics.distance) {
+            document.getElementById('etaDistance').textContent = `${orderData.logistics.distance.toFixed(1)} km`;
+        }
+    }
 }
 
-// Cleanup al cerrar la página
-window.addEventListener('beforeunload', () => {
-    if (unsubscribeOrder) unsubscribeOrder();
-    if (unsubscribeDriver) unsubscribeDriver();
+/**
+ * Escuchar ubicación del conductor en tiempo real
+ */
+function listenToDriverLocation(driverId) {
+    if (driverUnsubscribe) {
+        driverUnsubscribe();
+    }
+
+    driverUnsubscribe = db.collection('drivers')
+        .doc(driverId)
+        .onSnapshot((doc) => {
+            if (doc.exists) {
+                const driverData = doc.data();
+                const location = driverData.operational?.currentLocation;
+
+                if (location && location.latitude && location.longitude) {
+                    createDriverMarker(location.latitude, location.longitude);
+                    fitMapToMarkers();
+
+                    // Actualizar info del conductor
+                    const driverInfo = document.getElementById('driverInfo');
+                    driverInfo.style.display = 'block';
+
+                    const fullName = `${driverData.personalInfo?.firstName || ''} ${driverData.personalInfo?.lastName || ''}`.trim();
+                    document.getElementById('driverName').textContent = fullName || 'Repartidor';
+
+                    // Iniciales
+                    const initials = fullName
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2);
+                    document.getElementById('driverInitials').textContent = initials || 'RD';
+
+                    // Rating (si está disponible)
+                    if (driverData.kpis?.rating) {
+                        document.getElementById('driverRating').textContent = driverData.kpis.rating.toFixed(1);
+                    }
+                }
+            }
+        }, (error) => {
+            console.error('Error listening to driver location:', error);
+        });
+}
+
+/**
+ * Escuchar cambios en el pedido en tiempo real
+ */
+function listenToOrder(orderId) {
+    if (orderUnsubscribe) {
+        orderUnsubscribe();
+    }
+
+    orderUnsubscribe = db.collection('orders')
+        .doc(orderId)
+        .onSnapshot((doc) => {
+            if (doc.exists) {
+                const orderData = doc.data();
+                updateOrderInfo(orderData);
+
+                // Si hay conductor asignado, escuchar su ubicación
+                if (orderData.assignedDriverId) {
+                    listenToDriverLocation(orderData.assignedDriverId);
+                }
+
+                // Ocultar loading y mostrar info
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('orderInfo').style.display = 'block';
+            } else {
+                // Pedido no encontrado
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }, (error) => {
+            console.error('Error listening to order:', error);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+        });
+}
+
+/**
+ * Inicialización al cargar la página
+ */
+window.addEventListener('DOMContentLoaded', () => {
+    const orderId = getOrderIdFromURL();
+
+    if (!orderId || orderId === 'track') {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        return;
+    }
+
+    // Inicializar mapa
+    initMap();
+
+    // Escuchar pedido
+    listenToOrder(orderId);
 });
 
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeTracking);
-} else {
-    initializeTracking();
-}
+/**
+ * Limpiar listeners al cerrar la página
+ */
+window.addEventListener('beforeunload', () => {
+    if (orderUnsubscribe) orderUnsubscribe();
+    if (driverUnsubscribe) driverUnsubscribe();
+});
