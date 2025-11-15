@@ -2,9 +2,11 @@
 
 Este proyecto ya está configurado para Android con Firebase y Maps. A continuación se listan las variables y llaves que puedes/necesitas proveer para que la app funcione correctamente, y cómo configurarlas.
 
-## 1) Android Google Maps API Key
+## 1) Google Maps & Navigation SDK API Keys
+
+### 1.1) Android Google Maps API Key
 - Variable: MAPS_API_KEY
-- Uso: Clave de Android Maps para `react-native-maps` (y Google Play Services Maps)
+- Uso: Clave de Android Maps para `react-native-maps` y Navigation SDK
 - Dónde se inyecta: AndroidManifest mediante manifestPlaceholder `${MAPS_API_KEY}`
 - Configuración (opción recomendada):
   1. Edita `android/gradle.properties` y agrega la línea:
@@ -23,6 +25,58 @@ Estado actual del repo:
 - android/app/src/main/AndroidManifest.xml consume `${MAPS_API_KEY}` en:
   
   <meta-data android:name="com.google.android.geo.API_KEY" android:value="${MAPS_API_KEY}" />
+
+### 1.2) iOS Google Maps API Key
+- Ubicación: `ios/BeFastGO/AppDelegate.swift`
+- Ya configurado en línea 20: `GMSServices.provideAPIKey("AIzaSy...")`
+- Actualiza con tu API key de iOS si es diferente
+
+### 1.3) Navigation SDK API Key (Android/iOS)
+- Crear una clave separada en Google Cloud Console para Navigation SDK
+- Habilitar: **Navigation SDK for Android** y **Navigation SDK for iOS** (Beta)
+- Restricciones: Aplicar restricciones por bundle ID (iOS) y package name (Android)
+- Mismo proceso de configuración que Maps API Key
+
+### 1.4) Routes API Key
+- Crear clave para **Routes API** (Compute Routes)
+- Usado para cálculo de rutas multi-etapa (pickup → delivery)
+- Configurar en código: variable `ROUTES_API_KEY` en `.env` o config
+
+### 1.5) Places API Key
+- Habilitar **Places API** en la misma clave o crear una separada
+- Usado para búsqueda de ubicaciones y autocompletado
+
+### 1.6) Vertex AI / Grounding API Key (Opcional - Futuro)
+- Clave para **Vertex AI** con capacidad de Grounding
+- Usado para respuestas de IA con contexto de mapas
+- Variable: `GROUNDING_API_KEY`
+
+### APIs Requeridas en Google Cloud Console
+Para que el sistema funcione completamente, habilita las siguientes APIs:
+
+**Android:**
+- ✅ Navigation SDK for Android (Beta)
+- ✅ Maps SDK for Android
+- ✅ Places API
+- ✅ Routes API (Compute Routes)
+- ✅ Directions API (fallback)
+
+**iOS:**
+- ✅ Navigation SDK for iOS (Beta)
+- ✅ Maps SDK for iOS
+- ✅ Places API
+- ✅ Routes API (Compute Routes)
+- ✅ Directions API (fallback)
+
+**Web (para página de tracking público):**
+- ✅ Maps JavaScript API
+- ✅ Directions API
+- ✅ Distance Matrix API
+
+**Seguridad y Restricciones:**
+- Crear claves separadas para Android, iOS y Web
+- Aplicar restricciones de aplicación/sitio web
+- Cumplir con EEE ToS (Terms of Service) vigentes desde Jul 2025
 
 ## 2) Firebase (Android)
 - Archivo requerido: `android/app/src/main/google-services.json`
