@@ -6,3 +6,8 @@ export { default as OrderAssignmentService } from './OrderAssignmentService';
 export { default as WalletService } from './WalletService';
 export { default as PayrollService } from './PayrollService';
 export { default as IncidentManagementService } from './IncidentManagementService';
+
+// New services for Navigation SDK integration
+export { default as MetricsService } from './MetricsService';
+export { default as WalletCalculationService } from './WalletCalculationService';
+export { default as OrderReassignmentService } from './OrderReassignmentService';
