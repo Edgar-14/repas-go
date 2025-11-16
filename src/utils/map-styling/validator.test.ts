@@ -1,4 +1,4 @@
-import { getValidator } from './validator';
+import{getValidator}from'./validator';
 
 const validator = getValidator();
 
