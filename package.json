@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "preinstall": "npx -y npm-force-resolutions || exit 0",
+    "postinstall": "node scripts/patch-rn-gradle.js",
     "start": "react-native start",
     "ya": "powershell -ExecutionPolicy Bypass -File scripts\\run-android.ps1",
     "android": "react-native run-android",
@@ -25,7 +26,7 @@
   "dependencies": {
     "@genkit-ai/googleai": "^1.23.0",
     "@google/generative-ai": "^0.24.1",
-    "@googlemaps/react-native-navigation-sdk": "^0.11.0",
+
     "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@react-native-community/geolocation": "^3.4.0",
@@ -58,7 +59,7 @@
     "react-native-maps-directions": "^1.9.0",
     "react-native-permissions": "^5.4.4",
     "react-native-safe-area-context": "^5.6.2",
-    "react-native-screens": "^4.18.0",
+    "react-native-screens": "3.31.1",
     "react-native-share": "^12.2.1",
     "react-native-signature-canvas": "^5.0.1",
     "react-native-svg": "^15.14.0",
@@ -94,10 +95,12 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
-    "launch-editor": "2.6.0"
+    "launch-editor": "2.6.0",
+    "react-native-screens": "3.31.1"
   },
   "resolutions": {
-    "launch-editor": "2.6.0"
+    "launch-editor": "2.6.0",
+    "react-native-screens": "3.31.1"
   },
   "engines": {
     "node": ">=20"
