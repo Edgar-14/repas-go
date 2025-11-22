@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Capa_1" data-name="Capa 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 204.91 158.37">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#Degradado_sin_nombre_155-8);
+        stroke: url(#Degradado_sin_nombre_321-8);
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8 {
+        stroke-miterlimit: 10;
+        stroke-width: .5px;
+      }
+
+      .cls-2 {
+        fill: url(#Degradado_sin_nombre_155-6);
+        stroke: url(#Degradado_sin_nombre_321-6);
+      }
+
+      .cls-3 {
+        fill: url(#Degradado_sin_nombre_155-3);
+        stroke: url(#Degradado_sin_nombre_321-3);
+      }
+
+      .cls-4 {
+        fill: url(#Degradado_sin_nombre_155-7);
+        stroke: url(#Degradado_sin_nombre_321-7);
+      }
+
+      .cls-5 {
+        fill: url(#Degradado_sin_nombre_155-4);
+        stroke: url(#Degradado_sin_nombre_321-4);
+      }
+
+      .cls-6 {
+        fill: url(#Degradado_sin_nombre_155-5);
+        stroke: url(#Degradado_sin_nombre_321-5);
+      }
+
+      .cls-7 {
+        fill: url(#Degradado_sin_nombre_155-2);
+        stroke: url(#Degradado_sin_nombre_321-2);
+      }
+
+      .cls-8 {
+        fill: url(#Degradado_sin_nombre_155);
+        stroke: url(#Degradado_sin_nombre_321);
+      }
+    </style>
+    <linearGradient id="Degradado_sin_nombre_155" data-name="Degradado sin nombre 155" x1=".25" y1="142.17" x2="26.52" y2="142.17" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4db1ed"/>
+      <stop offset=".14" stop-color="#37a3e9"/>
+      <stop offset=".5" stop-color="#0081e2"/>
+      <stop offset=".84" stop-color="#0054a7"/>
+      <stop offset="1" stop-color="#004390"/>
+    </linearGradient>
+    <linearGradient id="Degradado_sin_nombre_321" data-name="Degradado sin nombre 321" x1="0" y1="142.17" x2="26.77" y2="142.17" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00a6f6"/>
+      <stop offset=".5" stop-color="#c6e5e5"/>
+      <stop offset="1" stop-color="#00a0a1"/>
+    </linearGradient>
+    <linearGradient id="Degradado_sin_nombre_155-2" data-name="Degradado sin nombre 155" x1="38.22" x2="62.4" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-2" data-name="Degradado sin nombre 321" x1="37.97" x2="62.65" xlink:href="#Degradado_sin_nombre_321"/>
+    <linearGradient id="Degradado_sin_nombre_155-3" data-name="Degradado sin nombre 155" x1="74.93" x2="98.28" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-3" data-name="Degradado sin nombre 321" x1="74.68" x2="98.53" xlink:href="#Degradado_sin_nombre_321"/>
+    <linearGradient id="Degradado_sin_nombre_155-4" data-name="Degradado sin nombre 155" x1="101.62" y1="142.02" x2="132.94" y2="142.02" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-4" data-name="Degradado sin nombre 321" x1="101.24" y1="142.02" x2="133.32" y2="142.02" xlink:href="#Degradado_sin_nombre_321"/>
+    <linearGradient id="Degradado_sin_nombre_155-5" data-name="Degradado sin nombre 155" x1="138.84" y1="142.12" x2="167.91" y2="142.12" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-5" data-name="Degradado sin nombre 321" x1="138.51" y1="142.12" x2="168.16" y2="142.12" xlink:href="#Degradado_sin_nombre_321"/>
+    <linearGradient id="Degradado_sin_nombre_155-6" data-name="Degradado sin nombre 155" x1="177.93" x2="204.66" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-6" data-name="Degradado sin nombre 321" x1="177.68" x2="204.91" xlink:href="#Degradado_sin_nombre_321"/>
+    <linearGradient id="Degradado_sin_nombre_155-7" data-name="Degradado sin nombre 155" x1="60.55" y1="50.63" x2="140.19" y2="50.63" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-7" data-name="Degradado sin nombre 321" x1="60.3" y1="50.63" x2="140.44" y2="50.63" xlink:href="#Degradado_sin_nombre_321"/>
+    <linearGradient id="Degradado_sin_nombre_155-8" data-name="Degradado sin nombre 155" x1="73.7" y1="69.31" x2="128.07" y2="69.31" xlink:href="#Degradado_sin_nombre_155"/>
+    <linearGradient id="Degradado_sin_nombre_321-8" data-name="Degradado sin nombre 321" x1="73.45" y1="69.31" x2="128.32" y2="69.31" xlink:href="#Degradado_sin_nombre_321"/>
+  </defs>
+  <path class="cls-8" d="m23.39,141.83c1.42-1.29,2.3-3.13,2.3-5.51,0-5.3-4.3-9.61-9.61-9.61H4.01c-2.05,0-3.76,1.71-3.76,3.76v23.39c0,2.05,1.71,3.76,3.76,3.76h12.9c5.3,0,9.61-4.3,9.61-9.61,0-2.8-1.21-4.84-3.13-6.18Zm-15.62-7.6h8.31c1.13,0,2.09.96,2.09,2.09s-.96,2.09-2.09,2.09H7.77v-4.18Zm9.15,15.87H7.77v-4.18h9.15c1.13,0,2.09.96,2.09,2.09s-.96,2.09-2.09,2.09Z"/>
+  <path class="cls-7" d="m38.22,130.47v23.39c0,2.05,1.71,3.76,3.76,3.76h20.42v-7.52h-16.66v-4.18h15.41v-7.52h-15.41v-4.18h16.66v-7.52h-20.42c-2.05,0-3.76,1.71-3.76,3.76Z"/>
+  <path class="cls-3" d="m74.93,130.47v27.15h7.52v-11.69h14.58v-7.52h-14.58v-4.18h15.83v-7.52h-19.59c-2.05,0-3.76,1.71-3.76,3.76Z"/>
+  <path class="cls-5" d="m117.37,126.42c-1.5,0-2.8.88-3.34,2.13l-12.4,29.07h8.39l7.31-17.04,7.27,17.04h8.35l-12.4-29.07c-.54-1.25-1.67-2.13-3.17-2.13Z"/>
+  <path class="cls-6" d="m153.79,138.49c-2.8-.33-6.31-.71-6.31-2.42,0-2.55,2.59-2.8,6.31-2.8,3.38,0,7.02.75,10.48,2.13l3.05-6.68c-4.01-1.67-8.85-2.59-13.53-2.59-7.64,0-14.03,3.72-14.03,9.94,0,7.81,8.35,8.6,14.03,9.27,3.76.42,6.35.71,6.35,2.88,0,1.59-1.88,2.38-6.35,2.38-4.01,0-8.14-1-11.86-2.76l-3.09,6.77c4.43,2.25,9.65,3.51,14.95,3.51,7.56,0,14.12-3.67,14.12-9.9,0-7.85-7.89-9.1-14.12-9.73Z"/>
+  <polygon class="cls-2" points="177.93 126.71 177.93 134.23 187.54 134.23 187.54 157.62 195.06 157.62 195.06 134.23 204.66 134.23 204.66 126.71 177.93 126.71"/>
+  <path class="cls-4" d="m124.57,30.11c-14.13-11.09-37.92-11.96-53.32,4.29,0-.55,0-.97,0-1.39,0-7.43.02-14.85-.02-22.28-.03-5.43-3.99-9.78-9.34-10.45-.88-.11-1.3.15-1.25,1.06.01.28,0,.56,0,.84-.02,19.8-.02,39.61-.08,59.41-.02,5.72,1.04,11.2,3.46,16.38,5.73,12.28,15.26,19.89,28.47,22.88.39.09.83.32,1.27,0-.86-.89-1.68-1.79-2.55-2.64-5.16-5-10.31-10.01-14.43-15.95-6.25-9.01-8.34-18.7-4.66-29.27,4.67-13.45,17.34-21.96,31.36-20.42,10.78,1.19,18.35,7.16,23.51,16.3,1.99,3.52,2.94,7.58,3.29,11.68.59,6.89-1.14,13.21-4.68,19.09-3.83,6.35-8.92,11.63-14.13,16.82-1.42,1.42-2.83,2.85-4.35,4.38,9.59-.91,24.58-8.93,30.62-25.28,6.11-16.56.59-34.66-13.15-45.44Z"/>
+  <path class="cls-1" d="m108.98,95.44c5.24-5.16,10.39-10.38,14.32-16.67,4.65-7.44,6.1-15.33,3.45-23.82-.44-1.4-.61-1.46-1.65-.4-2.42,2.48-4.83,4.99-7.26,7.47-.45.46-.64.96-.66,1.6-.05,2.59-.68,5.05-1.8,7.39-3.72,7.72-13.11,11.35-20.66,7.88-6.65-3.06-10.07-8.38-9.98-15.66.09-7.18,3.6-12.39,10.21-15.26,3.93-1.71,8-1.62,12.01-.02.78.31.92.65.27,1.26-.61.58-1.14,1.22-1.73,1.82-5.08,5.19-10.15,10.4-15.25,15.56-.71.72-.82,1.17-.05,1.94,1.94,1.96,3.77,4.01,5.67,6.01,1.14,1.2,1.16,1.18,2.35-.06,8.08-8.4,16.15-16.8,24.26-25.16.87-.89.98-1.51.22-2.5-5.5-7.16-12.67-10.99-21.73-11.19-2.64-.08-5.2.35-7.68,1.14-8.5,2.69-14.36,8.3-17.6,16.54-2.7,6.86-2.68,13.79.29,20.62,2.57,5.92,6.57,10.82,10.95,15.45,4.31,4.55,8.99,8.73,13.39,13.19.6.61.98.56,1.55-.02,2.35-2.39,4.73-4.75,7.12-7.1Z"/>
+</svg>
