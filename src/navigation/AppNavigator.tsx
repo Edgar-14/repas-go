@@ -204,10 +204,15 @@ const AppNavigator = () => {
             fontSize: 18,
           },
         }}
-        initialRouteName={isAuthenticated ? 'Main' : 'Login'}
+        initialRouteName={isAuthenticated ? 'Main' : 'Onboarding'}
       >
         {!isAuthenticated && (
           <>
+            <Stack.Screen
+              name="Onboarding"
+              component={OnboardingScreen as any}
+              options={{ headerShown: false }}
+            />
             <Stack.Screen
               name="Login"
               component={LoginScreen as any}
@@ -217,11 +222,6 @@ const AppNavigator = () => {
               name="Registration"
               component={RegistrationScreen as any}
               options={{ title: 'Registro de Conductor' }}
-            />
-            <Stack.Screen
-              name="Onboarding"
-              component={OnboardingScreen as any}
-              options={{ headerShown: false }}
             />
           </>
         )}
@@ -297,6 +297,11 @@ const AppNavigator = () => {
               name="Incidents"
               component={IncidentsScreen as any}
               options={{ title: 'Reportar Incidente' }}
+            />
+            <Stack.Screen
+              name="Chat"
+              component={ChatScreen as any}
+              options={{ title: 'Soporte BeFast' }}
             />
           </>
         )}

@@ -41,13 +41,15 @@ const RegistrationScreen: React.FC = () => {
         // Step 1
         fullName: '', email: '', phone: '', password: '',
         rfc: '', curp: '', nss: '',
-        vehicleType: 'motorcycle', vehicleMake: '', vehicleModel: '', vehiclePlate: '',
-        bankAccountHolder: '', bankAccountCLABE: '',
+        vehicleType: 'motorcycle', vehicleMake: '', vehicleModel: '', vehicleYear: '', vehiclePlate: '',
+        bankAccountHolder: '', bankName: '', bankAccountCLABE: '',
         // Step 2
-        idDoc: null as any | null,
+        ineFront: null as any | null,
+        ineBack: null as any | null,
         satDoc: null as any | null,
         licenseDoc: null as any | null,
         registrationDoc: null as any | null,
+        vehicleInsurance: null as any | null,
         // Step 3
         agreementsAccepted: false,
         // Step 4
@@ -62,7 +64,14 @@ const RegistrationScreen: React.FC = () => {
     const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
 
     const handleInputChange = (name: string, value: string | boolean) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'vehicleYear') {
+            const numericValue = (value as string).replace(/[^0-9]/g, '');
+            if (numericValue.length <= 4) {
+                setFormData(prev => ({ ...prev, [name]: numericValue }));
+            }
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleFilePick = async (name: string) => {
@@ -84,10 +93,12 @@ const RegistrationScreen: React.FC = () => {
                 emailVerified = await refreshEmailVerified();
             } catch {}
 
-            const ineUrl = await uploadDocumentIfAny(uid, 'ine', formData.idDoc);
+            const ineFrontUrl = await uploadDocumentIfAny(uid, 'ineFront', formData.ineFront);
+            const ineBackUrl = await uploadDocumentIfAny(uid, 'ineBack', formData.ineBack);
             const satUrl = await uploadDocumentIfAny(uid, 'sat', formData.satDoc);
             const licenseUrl = await uploadDocumentIfAny(uid, 'license', formData.licenseDoc);
             const circulationCardUrl = await uploadDocumentIfAny(uid, 'circulation', formData.registrationDoc);
+            const vehicleInsuranceUrl = await uploadDocumentIfAny(uid, 'vehicleInsurance', formData.vehicleInsurance);
             const equipmentPhotoUrl = await uploadDocumentIfAny(uid, 'equipment', formData.equipmentPhoto);
 
             // CORRECCIÓN: Usar el tipo importado
@@ -104,17 +115,21 @@ const RegistrationScreen: React.FC = () => {
                     type: formData.vehicleType,
                     make: formData.vehicleMake,
                     model: formData.vehicleModel,
+                    year: parseInt(formData.vehicleYear, 10),
                     plate: formData.vehiclePlate,
                 },
                 bank: {
                     accountHolder: formData.bankAccountHolder,
+                    bankName: formData.bankName,
                     clabe: formData.bankAccountCLABE,
                 },
                 documents: {
-                    ineUrl,
+                    ineFrontUrl,
+                    ineBackUrl,
                     satUrl,
                     licenseUrl,
                     circulationCardUrl,
+                    vehicleInsuranceUrl,
                     equipmentPhotoUrl,
                 },
                 agreements: {
@@ -199,9 +214,14 @@ const RegistrationScreen: React.FC = () => {
                             </View>
                             <TextInput placeholder="Marca" value={formData.vehicleMake} onChangeText={v => handleInputChange('vehicleMake', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
                             <TextInput placeholder="Modelo" value={formData.vehicleModel} onChangeText={v => handleInputChange('vehicleModel', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            <TextInput placeholder="Año" value={formData.vehicleYear} onChangeText={v => handleInputChange('vehicleYear', v)} style={styles.input} keyboardType="numeric" placeholderTextColor="#A0AEC0" />
                             <TextInput placeholder="Placa" value={formData.vehiclePlate} onChangeText={v => handleInputChange('vehiclePlate', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
 
                             <Text style={styles.sectionTitle}>Información Bancaria</Text>
+                            <View style={styles.inputContainer}>
+                                <Banknote style={styles.inputIcon} color="#A0AEC0" />
+                                <TextInput placeholder="Nombre del Banco" value={formData.bankName} onChangeText={v => handleInputChange('bankName', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
+                            </View>
                             <View style={styles.inputContainer}>
                                 <User style={styles.inputIcon} color="#A0AEC0" />
                                 <TextInput placeholder="Nombre del Titular" value={formData.bankAccountHolder} onChangeText={v => handleInputChange('bankAccountHolder', v)} style={styles.input} placeholderTextColor="#A0AEC0" />
@@ -219,10 +239,12 @@ const RegistrationScreen: React.FC = () => {
                     <View style={styles.stepContainer}>
                         <Text style={styles.stepTitle}>Documentación Legal</Text>
                         <Text style={styles.stepSubtitle}>Sube tus documentos obligatorios.</Text>
-                        <FileUpload name="idDoc" label="Identificación Oficial (INE)" file={formData.idDoc} />
+                        <FileUpload name="ineFront" label="INE (Anverso)" file={formData.ineFront} />
+                        <FileUpload name="ineBack" label="INE (Reverso)" file={formData.ineBack} />
                         <FileUpload name="satDoc" label="Constancia de Situación Fiscal (SAT)" file={formData.satDoc} />
                         <FileUpload name="licenseDoc" label="Licencia de Conducir Vigente" file={formData.licenseDoc} />
                         <FileUpload name="registrationDoc" label="Tarjeta de Circulación" file={formData.registrationDoc} />
+                        <FileUpload name="vehicleInsurance" label="Seguro de Vehículo (Opcional)" file={formData.vehicleInsurance} />
                         <TouchableOpacity onPress={handleNext} style={styles.nextButton}><Text style={styles.nextButtonText}>Siguiente</Text></TouchableOpacity>
                     </View>
                 );
@@ -271,11 +293,11 @@ const RegistrationScreen: React.FC = () => {
                             <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Nombre:</Text> {formData.fullName}</Text>
                             <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Email:</Text> {formData.email}</Text>
                             <Text style={styles.reviewText}><Text style={styles.reviewLabel}>RFC:</Text> {formData.rfc}</Text>
-                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Vehículo:</Text> {formData.vehicleMake} {formData.vehicleModel} ({formData.vehiclePlate})</Text>
-                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Documentos:</Text> {formData.idDoc ? '✅' : '❌'} INE, {formData.satDoc ? '✅' : '❌'} SAT, {formData.licenseDoc ? '✅' : '❌'} Licencia, {formData.registrationDoc ? '✅' : '❌'} T. Circulación</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Vehículo:</Text> {formData.vehicleMake} {formData.vehicleModel} {formData.vehicleYear} ({formData.vehiclePlate})</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Documentos:</Text> {formData.ineFront && formData.ineBack ? '✅' : '❌'} INE, {formData.satDoc ? '✅' : '❌'} SAT, {formData.licenseDoc ? '✅' : '❌'} Licencia, {formData.registrationDoc ? '✅' : '❌'} T. Circulación</Text>
                             <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Acuerdos:</Text> {formData.agreementsAccepted ? '✅ Firmados' : '❌ Pendientes'}</Text>
                             <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Capacitación:</Text> {isQuizCorrect && formData.equipmentPhoto ? '✅ Completada' : '❌ Incompleta'}</Text>
-                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Cuenta:</Text> ****{formData.bankAccountCLABE.slice(-4)}</Text>
+                            <Text style={styles.reviewText}><Text style={styles.reviewLabel}>Banco:</Text> {formData.bankName} - ****{formData.bankAccountCLABE.slice(-4)}</Text>
                         </ScrollView>
                         <TouchableOpacity style={styles.termsRow} onPress={() => handleInputChange('termsAccepted', !formData.termsAccepted)}>
                             <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxChecked]}>{formData.termsAccepted && <Check color="white" size={12}/>}</View>

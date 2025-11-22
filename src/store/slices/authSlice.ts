@@ -149,6 +149,24 @@ const validateDriverEligibility = async (driverId: string): Promise<ValidationRe
         message: 'Tus documentos están pendientes de aprobación.'
       };
     }
+
+    // Validación de capacitación
+    if (data?.administrative?.trainingStatus !== 'COMPLETED') {
+      return {
+        canReceiveOrders: false,
+        blockingReason: 'TRAINING_NOT_COMPLETED',
+        message: 'Tu capacitación está pendiente de ser completada.'
+      };
+    }
+
+    // Validación de límite de deuda
+    if (data?.wallet?.pendingDebts >= 300) {
+      return {
+        canReceiveOrders: false,
+        blockingReason: 'DEBT_LIMIT_EXCEEDED',
+        message: 'Has alcanzado el límite de deuda. Realiza un pago para continuar.'
+      };
+    }
     
     return { 
       canReceiveOrders: true,

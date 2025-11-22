@@ -1,13 +1,13 @@
 // src/screens/WalletScreen.tsx
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList, TransactionType, WalletTransaction } from '../types/index'; // Importar tipos unificados
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store'; // Importar AppDispatch
-import { fetchTransactionHistory, listenToWalletBalance } from '../store/slices/walletSlice';
+import { fetchTransactionHistory, listenToWalletBalance, payDebt, processWithdrawal } from '../store/slices/walletSlice';
 
 // --- INICIO DE CORRECCIÓN DE ICONOS ---
 // Definir los iconos que faltaban usando MaterialCommunityIcons
@@ -26,21 +26,61 @@ const DollarSign = (props: { color: string, size?: number }) => <MaterialCommuni
 
 type WalletScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Wallet'>;
 
+const PeriodCard = ({ title, orders, amount }: { title: string, orders: number, amount: number }) => (
+    <View style={styles.periodCard}>
+        <Text style={styles.periodTitle}>{title}</Text>
+        <Text style={styles.periodAmount}>${amount.toFixed(2)}</Text>
+        <Text style={styles.periodOrders}>{orders} pedidos</Text>
+    </View>
+);
+
 const WalletScreen: React.FC = () => {
     // CORRECCIÓN: Usar AppDispatch y RootState
     const dispatch = useDispatch<AppDispatch>();
     const driver = useSelector((state: RootState) => state.auth.driver);
-    const { balance, pendingDebts, transactions } = useSelector((state: RootState) => state.wallet);
+    const { balance, pendingDebts, transactions, isLoading, error } = useSelector((state: RootState) => state.wallet);
     const navigation = useNavigation<WalletScreenNavigationProp>();
 
     useEffect(() => {
-        // CORRECCIÓN: Quitar (driver as any)
         const driverId = driver?.uid;
         if (!driverId) return;
-        // CORRECCIÓN: Quitar 'as any' de los dispatch
         dispatch(fetchTransactionHistory(driverId));
-        dispatch(listenToWalletBalance(driverId));
+        const unsubscribe = dispatch(listenToWalletBalance(driverId));
+
+        return () => {
+            if (unsubscribe && typeof (unsubscribe as any).unsubscribe === 'function') {
+                (unsubscribe as any).unsubscribe();
+            }
+        };
     }, [dispatch, driver]);
+
+    useEffect(() => {
+        if (error) {
+            Alert.alert('Error', error);
+        }
+    }, [error]);
+
+    const handlePayDebt = () => {
+        const driverId = driver?.uid;
+        if (driverId && pendingDebts > 0) {
+            dispatch(payDebt({ driverId, amount: pendingDebts, paymentMethod: 'cash_deposit' }))
+                .unwrap()
+                .then(() => Alert.alert('Éxito', 'El pago de tu deuda se ha procesado correctamente.'))
+                .catch(() => {});
+        }
+    };
+
+    const handleWithdrawal = () => {
+        const driverId = driver?.uid;
+        if (driverId && balance > 50) { // Lógica de negocio: solo retirar si > $50
+            dispatch(processWithdrawal({ driverId, amount: balance, method: 'bank_transfer' }))
+                .unwrap()
+                .then(() => Alert.alert('Éxito', 'Tu solicitud de retiro ha sido enviada.'))
+                .catch(() => {});
+        } else {
+            Alert.alert('Saldo insuficiente', 'Necesitas al menos $50 para solicitar un retiro.');
+        }
+    };
 
     const transactionIcons = {
         [TransactionType.CARD_ORDER_TRANSFER]: { icon: ShoppingBag, color: '#3B82F6' },
@@ -98,6 +138,24 @@ const WalletScreen: React.FC = () => {
                     </View>
                 </TouchableOpacity>
 
+                {driver?.kpis && (
+                    <View style={styles.card}>
+                        <Text style={styles.activityTitle}>Resumen del Período</Text>
+                        <View style={styles.periodGrid}>
+                            <PeriodCard title="Hoy" orders={driver.kpis.todayCompletedOrders} amount={driver.kpis.todayTotal} />
+                            <PeriodCard title="Esta Semana" orders={driver.kpis.weekCompletedOrders} amount={driver.kpis.weekTotal} />
+                            <PeriodCard title="Este Mes" orders={driver.kpis.monthCompletedOrders} amount={driver.kpis.monthTotal} />
+                        </View>
+                    </View>
+                )}
+
+                <View style={styles.card}>
+                    <Text style={styles.activityTitle}>Desglose de Ingresos</Text>
+                    <View style={styles.placeholder}>
+                        <Text style={styles.placeholderText}>Gráfico de Desglose Próximamente</Text>
+                    </View>
+                </View>
+
                 <View style={styles.card}>
                      <Text style={styles.activityTitle}>Actividad Reciente</Text>
                     {transactions.slice(0, 5).map((tx: WalletTransaction) => {
@@ -127,14 +185,19 @@ const WalletScreen: React.FC = () => {
             </ScrollView>
 
             <View style={styles.footer}>
-                <TouchableOpacity style={[styles.footerButton, styles.secondaryButton]}>
-                    <Text style={[styles.footerButtonText, styles.secondaryButtonText]}>Pagar Deuda</Text>
+                <TouchableOpacity
+                    style={[styles.footerButton, styles.secondaryButton, (isLoading || pendingDebts === 0) && styles.disabledButton]}
+                    onPress={handlePayDebt}
+                    disabled={isLoading || pendingDebts === 0}
+                >
+                    {isLoading ? <ActivityIndicator color="#00B894" /> : <Text style={[styles.footerButtonText, styles.secondaryButtonText]}>Pagar Deuda</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.footerButton, styles.primaryButton]}
-                    onPress={() => navigation.navigate('Withdrawal')} // CORRECCIÓN: Navegar a pantalla de retiro
+                    style={[styles.footerButton, styles.primaryButton, (isLoading || balance < 50) && styles.disabledButton]}
+                    onPress={handleWithdrawal}
+                    disabled={isLoading || balance < 50}
                 >
-                    <Text style={[styles.footerButtonText, styles.primaryButtonText]}>Solicitar Retiro</Text>
+                    {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[styles.footerButtonText, styles.primaryButtonText]}>Solicitar Retiro</Text>}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -223,6 +286,55 @@ const styles = StyleSheet.create({
     footerButtonText: { fontWeight: 'bold', fontSize: 16 },
     secondaryButtonText: { color: '#00B894' },
     primaryButtonText: { color: 'white' },
+    disabledButton: {
+        backgroundColor: '#A0AEC0',
+        borderColor: '#A0AEC0',
+    },
+    periodGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 8,
+    },
+    periodCard: {
+        flex: 1,
+        backgroundColor: '#F7FAFC',
+        padding: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        marginHorizontal: 4,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    periodTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4A5568',
+    },
+    periodAmount: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2D3748',
+        marginVertical: 4,
+    },
+    periodOrders: {
+        fontSize: 12,
+        color: '#718096',
+    },
+    placeholder: {
+        height: 150,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F7FAFC',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        marginTop: 8,
+    },
+    placeholderText: {
+        color: '#A0AEC0',
+        fontSize: 14,
+        fontWeight: '500',
+    },
 });
 
 export default WalletScreen;

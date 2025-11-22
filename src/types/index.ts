@@ -87,6 +87,19 @@ xp: number;
 xpGoal: number;
 rank: string;
 };
+kpis: {
+    todayCompletedOrders: number;
+    todayTotal: number;
+    weekCompletedOrders: number;
+    weekTotal: number;
+    monthCompletedOrders: number;
+    monthTotal: number;
+    acceptanceRate: number;
+    rating: number;
+    ratingCount: number;
+    avgDeliveryTime: number;
+    onlineHours: number;
+};
 }
 
 export enum OrderStatus {
