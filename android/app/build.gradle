@@ -59,7 +59,7 @@ react {
     // hermesFlags = ["-O", "-output-source-map"]
 
     /* Autolinking */
-    autolinkLibrariesWithApp()
+    // autolinkLibrariesWithApp() // This is a non-standard call and might be causing issues.
 }
 
 /**
@@ -141,7 +141,7 @@ dependencies {
 
     // Google Maps SDK (compatible version with react-native-maps)
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
-    
+
     // Location services (keep if needed for geolocation)
     implementation 'com.google.android.gms:play-services-location:21.0.1'
 
@@ -155,8 +155,10 @@ dependencies {
     }
 }
 
+/* This block will cause a build error because the corresponding plugin is commented out at the top.
 secrets {
     // Use local secrets file; falls back to defaults if missing
     propertiesFileName = "secrets.properties"
     defaultPropertiesFileName = "local.defaults.properties"
 }
+*/
