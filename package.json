@@ -1,5 +1,5 @@
 {
-  "name": "BeFastGO",
+  "name": "befastgo",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -95,6 +95,7 @@
     "typescript": "^5.8.3"
   },
   "overrides": {
+    "@react-native/gradle-plugin": "0.72.11",
     "launch-editor": "2.6.0",
     "react-native-screens": "3.31.1"
   },
@@ -105,5 +106,5 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "npm@10"
+  "packageManager": "npm@10.0.0"
 }
